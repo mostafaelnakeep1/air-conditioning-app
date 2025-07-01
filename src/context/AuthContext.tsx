@@ -7,15 +7,13 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BASE_URL } from "../config/config";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
 import axios from "axios";
+import { BASE_URL } from "../config/config";
+import { setClientToken } from "../api/apiClient";
 
-
-// نوع الدور
 type UserRole = "client" | "company" | "admin" | null;
 
-// شكل بيانات المستخدم
 interface UserData {
   _id: string;
   name: string;
@@ -29,14 +27,14 @@ interface AuthContextType {
   isAuthReady: boolean;
   user: UserData | null;
   token: string;
-  setUser: (user: UserData | null) => void;
   userRole: UserRole;
   isAdmin: boolean;
   isCompany: boolean;
   isClient: boolean;
-   userToken: string | null;
+  userToken: string | null;
+  setUser: (user: UserData | null) => void;
   setUserToken: (token: string | null) => void;
-  login: (userData: UserData, token: string) => void;
+  login: (user: UserData, token: string) => void;
   logout: () => void;
 }
 
@@ -45,12 +43,12 @@ const AuthContext = createContext<AuthContextType>({
   isAuthReady: false,
   user: null,
   token: "",
-  setUser: () => {},
   userRole: null,
   isAdmin: false,
   isCompany: false,
   isClient: false,
   userToken: null,
+  setUser: () => {},
   setUserToken: () => {},
   login: () => {},
   logout: () => {},
@@ -66,58 +64,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
 
-
   const isAdmin = userRole === "admin";
   const isCompany = userRole === "company";
   const isClient = userRole === "client";
 
   const login = (userData: UserData, tokenData: string) => {
-  const fixedUser = {
-    ...userData,
-    _id: userData._id || userData.id, // ✨ أهو الحل الذهبي هنا
-    token: tokenData,
-  };
-  setUser(fixedUser);
-  setToken(tokenData);
-  setUserToken(tokenData); 
-  setUserRole(fixedUser.role);
-  setIsLoggedIn(true);
-  AsyncStorage.setItem("token", tokenData);
-  AsyncStorage.setItem("user", JSON.stringify(fixedUser));
-};
+    const fixedUser = {
+      ...userData,
+      _id: userData._id || userData.id,
+      token: tokenData,
+    };
 
+    setUser(fixedUser);
+    setToken(tokenData);
+    setUserToken(tokenData);
+    setUserRole(fixedUser.role);
+    setIsLoggedIn(true);
+
+    AsyncStorage.setItem("token", tokenData);
+    AsyncStorage.setItem("user", JSON.stringify(fixedUser));
+
+    setClientToken(tokenData); // ✅ إعداد Axios بالتوكن
+  };
 
   const logout = () => {
     setUser(null);
     setToken("");
+    setUserToken(null);
     setUserRole(null);
     setIsLoggedIn(false);
     AsyncStorage.removeItem("token");
+    AsyncStorage.removeItem("user");
+
+    setClientToken(null); // ✅ إزالة التوكن من Axios
   };
 
-useEffect(() => {
-  const checkStoredToken = async () => {
-    try {
-      const storedToken = await AsyncStorage.getItem("token");
-      const storedUser = await AsyncStorage.getItem("user"); // جلب بيانات المستخدم لو محفوظة
-      if (storedToken) {
-        setToken(storedToken);
-        setUserToken(storedToken);
-        setIsLoggedIn(true);
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setUserRole(userData.role);
+  useEffect(() => {
+    const checkStoredToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem("token");
+        const storedUser = await AsyncStorage.getItem("user");
+
+        if (storedToken) {
+          setClientToken(storedToken); // ✅ نبدأ هنا بالتوكن
+          setToken(storedToken);
+          setUserToken(storedToken);
+          setIsLoggedIn(true);
+
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            setUserRole(userData.role);
+          }
         }
+      } catch (error) {
+        console.error("Error loading token or user from storage", error);
+      } finally {
+        setIsAuthReady(true);
       }
-    } catch (error) {
-      console.error("Error loading token or user from storage", error);
-    } finally {
-      setIsAuthReady(true);
-    }
-  };
-  checkStoredToken();
-}, []);
+    };
+
+    checkStoredToken();
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -127,13 +136,13 @@ useEffect(() => {
         token,
         userRole,
         isAdmin,
-        setUser,
         isCompany,
         isClient,
+        userToken,
+        setUser,
+        setUserToken,
         login,
         logout,
-        userToken,       
-        setUserToken,
       }}
     >
       {children}
@@ -141,9 +150,10 @@ useEffect(() => {
   );
 };
 
-
 export const useRegisterPushToken = (userToken: string) => {
   useEffect(() => {
+    if (!userToken) return;
+
     const getAndSendToken = async () => {
       const token = await registerForPushNotificationsAsync();
       if (token) {
@@ -164,5 +174,5 @@ export const useRegisterPushToken = (userToken: string) => {
     };
 
     getAndSendToken();
-  }, []);
+  }, [userToken]);
 };

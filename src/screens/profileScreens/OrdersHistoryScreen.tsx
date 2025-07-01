@@ -12,13 +12,13 @@ import {
 } from "react-native";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../../config/config";
-
-// استيراد الأنواع وتعريف نوع التنقل
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Order } from "../../navigation/types";
+import { useAuth } from "../../context/AuthContext"; // ✅
+import apiClient from "../../api/apiClient";
+
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OrdersHistoryScreen">;
 
@@ -26,45 +26,20 @@ const OrdersHistoryScreen = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const navigation = useNavigation<NavigationProp>();
-
-  const getToken = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      console.log("Token from AsyncStorage:", token);
-      return token;
-    } catch (error) {
-      console.log("فشل في جلب التوكن", error);
-      return null;
-    }
-  };
+  const { userToken } = useAuth(); // ✅
 
   const fetchOrders = async () => {
-    setLoading(true);
-    const token = await getToken();
-
-    if (!token) {
+    if (!userToken) {
       Alert.alert("خطأ", "لم يتم العثور على التوكن");
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
-      const res = await fetch(`${BASE_URL}/orders`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await apiClient.get("/orders");
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        Alert.alert("خطأ", data.message || "فشل في تحميل الطلبات");
-        return;
-      }
-
-      setOrders(data.data || []);
+      setOrders(res.data.data || []);
     } catch (error) {
       console.error("Fetch error:", error);
       Alert.alert("خطأ", "حدث خطأ في الاتصال بالخادم");

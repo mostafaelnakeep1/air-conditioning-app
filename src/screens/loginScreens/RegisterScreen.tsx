@@ -23,6 +23,7 @@ import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
 import { BASE_URL } from "../../config/config";
 import { useAuth } from "../../context/AuthContext";
+import apiClient from "../../api/apiClient";
 
 
 type RootStackParamList = {
@@ -161,42 +162,32 @@ const handleRegister = async () => {
   try {
     setLoading(true);
 
-    const res = await fetch(`${BASE_URL}/register-company`, {
-      method: "POST",
+    const res = await apiClient.post("/register-company", formData, {
       headers: {
         Accept: "application/json",
-        // لا تضف Content-Type هنا عشان FormData بيديرها تلقائياً
+        "Content-Type": "multipart/form-data",
       },
-      body: formData,
     });
 
-    const data = await res.json();
-
+    const data = res.data;
     console.log("📥 Server response:", res.status, data);
-    if (!res.ok) {
-      Alert.alert("فشل", data.message || "حدث خطأ ما");
-      setLoading(false);
+
+    if (userType === "company") {
+      Alert.alert("تم إرسال الطلب", "تم تسجيل الشركة بنجاح، بانتظار موافقة الإدارة.");
+      navigation.replace("MainTabs");
       return;
     }
 
-    // تخزين بيانات المستخدم والتوكن
-    await AsyncStorage.setItem("userData", JSON.stringify(data.user));
-    await AsyncStorage.setItem("token", data.token);
-
-    if (rememberMe) {
-      await AsyncStorage.setItem("rememberMe", "true");
-    } else {
-      await AsyncStorage.removeItem("rememberMe");
-    }
-
-    login(data.user, data.token);
+    
     navigation.replace("MainTabs");
-  } catch (err) {
-    Alert.alert("خطأ", "تعذر الاتصال بالسيرفر");
+  } catch (err: any) {
+    console.log("❌ Error:", err.response?.data || err.message);
+    Alert.alert("خطأ", err.response?.data?.message || "تعذر الاتصال بالسيرفر");
   } finally {
     setLoading(false);
   }
 };
+
 
 
 

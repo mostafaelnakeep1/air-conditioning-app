@@ -1,24 +1,19 @@
 import axios from "axios";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL } from "../config/config"; // عدل المسار حسب مشروعك
+import { BASE_URL } from "../config/config";
 
+// أنشئ الكلاينت مرة واحدة
 const apiClient = axios.create({
   baseURL: BASE_URL,
 });
 
-// إضافة توكن المصادقة لكل طلب بشكل تلقائي
-apiClient.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem("token");
-    console.log("🔐 Sending token:", token);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+export const setClientToken = (token: string | null) => {
+  if (token) {
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    console.log("✅ Token set in axios:", token);
+  } else {
+    delete apiClient.defaults.headers.common["Authorization"];
+    console.log("🚫 Token removed from axios");
   }
-);
+};
 
 export default apiClient;

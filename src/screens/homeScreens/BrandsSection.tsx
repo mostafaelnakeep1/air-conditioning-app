@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Layout.width(3),
     marginVertical: Layout.height(2),
+  
   },
   list: {
     gap: Layout.width(2),

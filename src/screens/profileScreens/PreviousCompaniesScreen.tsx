@@ -12,11 +12,14 @@ import {
 } from "react-native";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "../../context/AuthContext";
 import { BASE_URL } from "../../config/config";
 import { useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import type { RootStackParamList, Company } from "../../navigation/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import apiClient from "../../api/apiClient";
+
 
 type PreviousCompaniesScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -25,6 +28,7 @@ type PreviousCompaniesScreenNavigationProp = StackNavigationProp<
 
 const PreviousCompaniesScreen = () => {
   const navigation = useNavigation<PreviousCompaniesScreenNavigationProp>();
+  const { userToken } = useAuth(); // جلب التوكن من الـ Context
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -32,42 +36,23 @@ const PreviousCompaniesScreen = () => {
   const [selectedCity, setSelectedCity] = useState("الكل");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
-  const getToken = async () => {
-    try {
-      return await AsyncStorage.getItem("token");
-    } catch {
-      return null;
-    }
-  };
-
   const fetchCompanies = async () => {
-    const token = await getToken();
-    if (!token) return;
+  try {
+    const res = await apiClient.get("/profile/previous-companies");
 
-    try {
-      const res = await fetch(`${BASE_URL}/profile/previous-companies`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!res.ok) {
-        const text = await res.text(); // دي مهمة نعرف محتوى الخطأ
-        throw new Error(`HTTP Error ${res.status}: ${text}`);
-      }
-      const data = await res.json();
+    const data = res.data;
 
-      const sorted = data.data.sort(
-        (a: Company, b: Company) =>
-          new Date(b.lastInteraction || "").getTime() - new Date(a.lastInteraction || "").getTime()
-      );
+    const sorted = data.data.sort(
+      (a: Company, b: Company) =>
+        new Date(b.lastInteraction || "").getTime() - new Date(a.lastInteraction || "").getTime()
+    );
 
-      setCompanies(sorted);
-      setFilteredCompanies(sorted);
-    } catch (error) {
-      console.error("Fetch companies error:", error);
-    }
-  };
+    setCompanies(sorted);
+    setFilteredCompanies(sorted);
+  } catch (error: any) {
+    console.error("❌ Fetch companies error:", error.response?.data || error.message);
+  }
+};
 
   const loadFavorites = async () => {
     try {
@@ -90,12 +75,9 @@ const PreviousCompaniesScreen = () => {
   };
 
   useEffect(() => {
-    const fetchAll = async () => {
-      await fetchCompanies();
-      await loadFavorites();
-    };
-    fetchAll();
-  }, []);
+    fetchCompanies();
+    loadFavorites();
+  }, [userToken]); // نعيد الجلب لما يتغير userToken
 
   useEffect(() => {
     let result = [...companies];
@@ -136,7 +118,7 @@ const PreviousCompaniesScreen = () => {
             <TouchableOpacity
               key={city}
               style={[styles.cityChip, selectedCity === city && styles.cityChipActive]}
-              onPress={() => setSelectedCity(city?? "الكل")}
+              onPress={() => setSelectedCity(city ?? "الكل")}
             >
               <Text
                 style={{

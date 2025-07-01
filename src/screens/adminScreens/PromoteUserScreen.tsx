@@ -12,6 +12,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
 import { BASE_URL } from "../../config/config";
+import apiClient from "../../api/apiClient";
+
 
 interface User {
   _id: string;
@@ -49,11 +51,8 @@ const fetchUsers = async () => {
     setLoading(true);
     const token = await AsyncStorage.getItem("token");
     const role = mode === "promote" ? "client" : "admin";
-    const res = await fetch(`${BASE_URL}/users?role=${role}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    let filtered = Array.isArray(data.users) ? data.users : [];
+    const res = await apiClient.get(`/users?role=${role}`);
+    let filtered = Array.isArray(res.data.users) ? res.data.users : [];
 
     if (mode === "promote") {
       filtered = filtered.filter((user: User) => user.role === "client");
@@ -71,10 +70,7 @@ const fetchUsers = async () => {
   const handlePromote = async (id: string) => {
     try {
       const token = await AsyncStorage.getItem("token");
-      await fetch(`${BASE_URL}/admin/users/${id}/promote`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.patch(`/admin/users/${id}/promote`);
       setMode("demote");
     } catch (err) {
       console.error("Promote error:", err);
@@ -83,14 +79,8 @@ const fetchUsers = async () => {
 
 const handleDemote = async (id: string) => {
   try {
-    const token = await AsyncStorage.getItem("token");
-    await fetch(`${BASE_URL}/admin/users/${id}/demote`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ newRole: "client" }),  // أو "company"
+    await apiClient.patch(`/admin/users/${id}/demote`, {
+      newRole: "client", // أو "company" حسب الحالة
     });
     fetchUsers();
   } catch (err) {

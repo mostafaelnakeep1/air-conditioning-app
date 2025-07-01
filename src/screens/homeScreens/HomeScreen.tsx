@@ -12,7 +12,7 @@ import colors from "../../constants/colors";
 export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
         <SearchBar />
         <BrandsSection />
         <AdBanner />

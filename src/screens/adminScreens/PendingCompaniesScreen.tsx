@@ -35,6 +35,10 @@ export default function PendingCompaniesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const fetchPendingCompanies = async () => {
+    if (!userToken) {
+    console.warn("⛔ لا يوجد توكن");
+    return;
+    }
     try {
       const res = await axios.get(`${BASE_URL}/admin/companies/pending`, {
         headers: { Authorization: `Bearer ${userToken}` },
@@ -49,8 +53,13 @@ export default function PendingCompaniesScreen() {
   };
 
   useEffect(() => {
+    if (!userToken) {
+    console.warn("⛔ لا يوجد توكن، لم يتم تنفيذ الطلب");
+    return;
+  }
+    setLoading(true);
     fetchPendingCompanies();
-  }, []);
+  }, [userToken]);
 
   const handleAction = async (id: string, action: "approve" | "reject") => {
     try {

@@ -13,6 +13,8 @@ import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../../config/config";
+import apiClient from "../../api/apiClient";
+
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const { login } = useAuth();
@@ -47,19 +49,9 @@ const handleLogin = async () => {
   setLoading(true);
 
   try {
-    const response = await fetch(`${BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }, // مفيش Authorization هنا
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await apiClient.post("/auth/login", { email, password });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      Alert.alert("فشل تسجيل الدخول", data.message || "حدث خطأ ما");
-      setLoading(false);
-      return;
-    }
+    const data = res.data;
 
     if (data.user?.role === "company") {
       if (data.user.status === "pending") {
@@ -75,7 +67,9 @@ const handleLogin = async () => {
       }
     }
 
+    // حقن التوكن في axios
     login(data.user, data.token);
+
     console.log("🚨 USER DATA:", data.user);
 
     await AsyncStorage.setItem("userData", JSON.stringify(data.user));
@@ -88,8 +82,9 @@ const handleLogin = async () => {
     }
 
     navigation.replace("MainTabs");
-  } catch (error) {
-    Alert.alert("خطأ", "تعذر الاتصال بالسيرفر");
+  } catch (error: any) {
+    console.log("❌ Login error:", error.response?.data || error.message);
+    Alert.alert("خطأ", error.response?.data?.message || "تعذر الاتصال بالسيرفر");
   } finally {
     setLoading(false);
   }

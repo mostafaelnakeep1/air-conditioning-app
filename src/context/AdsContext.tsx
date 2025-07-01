@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import apiClient from "../api/apiClient";
+import { useAuth } from "./AuthContext";
 
 export interface Ad {
   _id: string;
@@ -25,19 +26,26 @@ export const AdsContext = createContext<AdsContextType>({
 
 export const AdsProvider = ({ children }: { children: ReactNode }) => {
   const [ads, setAds] = useState<Ad[]>([]);
+  const { userToken, isAuthReady } = useAuth(); // ✅ استخدم التوكن عند الجاهزية
 
-  const fetchAds = async () => {
+  const fetchAds = async (): Promise<void> => {
     try {
       const res = await apiClient.get("/ads");
       setAds(res.data.ads);
-    } catch (error) {
-      console.error("Failed to fetch ads", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("❌ Failed to fetch ads:", error.message);
+      } else {
+        console.error("❌ Failed to fetch ads:", error);
+      }
     }
   };
 
   useEffect(() => {
-    fetchAds();
-  }, []);
+    if (isAuthReady && userToken) {
+      fetchAds();
+    }
+  }, [isAuthReady, userToken]);
 
   return (
     <AdsContext.Provider value={{ ads, fetchAds, setAds }}>
