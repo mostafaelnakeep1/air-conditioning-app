@@ -10,11 +10,11 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
-import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
 import { BASE_URL } from "../../config/config";
+import apiClient from "../../api/apiClient";
 
 interface Notification {
   _id: string;
@@ -34,9 +34,7 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
+      const res = await apiClient.get("/notifications");
       setNotifications(res.data.notifications);
     } catch (error) {
       console.error("فشل في جلب الإشعارات:", error);
@@ -56,13 +54,10 @@ export default function NotificationsScreen() {
   const markAllAsRead = async () => {
     setMarking(true);
     try {
-      await axios.put(
-        `${BASE_URL}/notifications/mark-all-read`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${userToken}` },
-        }
-      );
+      apiClient.put(
+        "/notifications/mark-all-read");
+        
+      
       fetchNotifications();
     } catch (error) {
       console.error("فشل تحديد الكل كمقروء", error);
@@ -73,13 +68,8 @@ export default function NotificationsScreen() {
 
   const handleNotificationPress = async (id: string) => {
     try {
-      await axios.put(
-        `${BASE_URL}/notifications/mark-read/${id}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${userToken}` },
-        }
-      );
+      await apiClient.put("/notifications/mark-read/${id}");
+        
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
       );

@@ -10,9 +10,9 @@ import {
   Modal,
   TouchableWithoutFeedback,
   ScrollView,
+  Image,
 } from "react-native";
-import axios from "axios";
-import { BASE_URL } from "../../config/config";
+import apiClient from "../../api/apiClient";
 import { useAuth } from "../../context/AuthContext";
 import colors from "../../constants/colors";
 
@@ -24,75 +24,88 @@ type Company = {
   address?: string;
   description?: string;
   createdAt?: string;
-  [key: string]: any; // لو في بيانات إضافية
+  [key: string]: any;
 };
 
-export default function PendingCompaniesScreen() {
+type Offer = {
+  _id: string;
+  title: string;
+  type: "image" | "video";
+  company?: { name: string };
+  mediaUrl?: string;
+  status: string;
+};
+
+export default function PendingItemsScreen() {
   const { userToken } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [companyModalVisible, setCompanyModalVisible] = useState(false);
+
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [offerModalVisible, setOfferModalVisible] = useState(false);
 
   const fetchPendingCompanies = async () => {
-    if (!userToken) {
-    console.warn("⛔ لا يوجد توكن");
-    return;
-    }
     try {
-      const res = await axios.get(`${BASE_URL}/admin/companies/pending`, {
+      const res = await apiClient.get("/admin/companies/pending", {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       setCompanies(res.data.companies);
     } catch (error) {
-      console.error("فشل جلب الشركات:", error);
+      console.error("❌ فشل جلب الشركات:", error);
       Alert.alert("خطأ", "فشل جلب الشركات المعلقة");
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchPendingOffers = async () => {
+    try {
+      const res = await apiClient.get("/admin/offers/pending", {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      setOffers(res.data.offers);
+    } catch (error) {
+      console.error("❌ فشل في جلب العروض:", error);
+      Alert.alert("خطأ", "فشل في جلب العروض");
     }
   };
 
   useEffect(() => {
-    if (!userToken) {
-    console.warn("⛔ لا يوجد توكن، لم يتم تنفيذ الطلب");
-    return;
-  }
+    if (!userToken) return;
     setLoading(true);
-    fetchPendingCompanies();
+    Promise.all([fetchPendingCompanies(), fetchPendingOffers()]).finally(() =>
+      setLoading(false)
+    );
   }, [userToken]);
 
-  const handleAction = async (id: string, action: "approve" | "reject") => {
+  const handleCompanyAction = async (id: string, action: "approve" | "reject") => {
     try {
-      await axios.put(
-        `${BASE_URL}/admin/companies/${id}/${action}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${userToken}` },
-        }
-      );
-      Alert.alert(
-        "نجاح",
-        `تم ${action === "approve" ? "قبول" : "رفض"} الشركة`
-      );
-      setModalVisible(false);
+      await apiClient.put(`/admin/companies/${id}/${action}`, {}, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      Alert.alert("نجاح", `تم ${action === "approve" ? "قبول" : "رفض"} الشركة`);
+      setCompanyModalVisible(false);
       setSelectedCompany(null);
       fetchPendingCompanies();
     } catch (error) {
-      Alert.alert(
-        "خطأ",
-        `فشل ${action === "approve" ? "قبول" : "رفض"} الشركة`
-      );
+      Alert.alert("خطأ", `فشل ${action === "approve" ? "قبول" : "رفض"} الشركة`);
     }
   };
 
-  const openDetails = (company: Company) => {
-    setSelectedCompany(company);
-    setModalVisible(true);
-  };
-
-  const closeDetails = () => {
-    setModalVisible(false);
-    setSelectedCompany(null);
+  const handleOfferAction = async (id: string, action: "approve" | "reject") => {
+    try {
+      await apiClient.put(`/admin/offers/${id}/${action}`, {}, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      Alert.alert("تم", `تم ${action === "approve" ? "قبول" : "رفض"} العرض`);
+      setOfferModalVisible(false);
+      setSelectedOffer(null);
+      fetchPendingOffers();
+    } catch (error) {
+      Alert.alert("خطأ", `فشل ${action === "approve" ? "قبول" : "رفض"} العرض`);
+    }
   };
 
   if (loading) {
@@ -104,7 +117,8 @@ export default function PendingCompaniesScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
+      <Text style={styles.sectionTitle}>الشركات المعلقة</Text>
       {companies.length === 0 ? (
         <Text style={styles.noDataText}>لا توجد شركات معلقة</Text>
       ) : (
@@ -114,104 +128,81 @@ export default function PendingCompaniesScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => openDetails(item)}
+              onPress={() => {
+                setSelectedCompany(item);
+                setCompanyModalVisible(true);
+              }}
             >
-              <Text style={styles.companyName}>{item.name}</Text>
+              <Text style={styles.title}>{item.name}</Text>
               <Text style={styles.text}>{item.email}</Text>
               <Text style={styles.text}>{item.phone}</Text>
-              <View style={styles.buttonsRow}>
-                <TouchableOpacity
-                  style={[styles.button, styles.approveButton]}
-                  onPress={() => handleAction(item._id, "approve")}
-                >
-                  <Text style={styles.buttonText}>قبول</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, styles.rejectButton]}
-                  onPress={() => handleAction(item._id, "reject")}
-                >
-                  <Text style={styles.buttonText}>رفض</Text>
-                </TouchableOpacity>
-              </View>
             </TouchableOpacity>
           )}
         />
       )}
 
-      {/* مودال تفاصيل الشركة */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={closeDetails}
-      >
-        <TouchableWithoutFeedback onPress={closeDetails}>
+      <Text style={styles.sectionTitle}>العروض المعلقة</Text>
+      {offers.length === 0 ? (
+        <Text style={styles.noDataText}>لا توجد عروض معلقة</Text>
+      ) : (
+        <FlatList
+          data={offers}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => {
+                setSelectedOffer(item);
+                setOfferModalVisible(true);
+              }}
+            >
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.text}>النوع: {item.type === "image" ? "صورة" : "فيديو"}</Text>
+              {item.company?.name && (
+                <Text style={styles.text}>الشركة: {item.company.name}</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        />
+      )}
+
+      {/* مودال الشركة */}
+      <Modal visible={companyModalVisible} transparent animationType="slide">
+        <TouchableWithoutFeedback onPress={() => setCompanyModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <ScrollView>
-                  <Text style={styles.detailsTitle}>تفاصيل الشركة</Text>
                   {selectedCompany && (
                     <>
-                      <Text style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>الاسم: </Text>
-                        {selectedCompany.name}
-                      </Text>
-                      <Text style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>البريد الإلكتروني: </Text>
-                        {selectedCompany.email}
-                      </Text>
-                      <Text style={styles.detailItem}>
-                        <Text style={styles.detailLabel}>رقم التليفون: </Text>
-                        {selectedCompany.phone}
-                      </Text>
+                      <Text style={styles.modalTitle}>تفاصيل الشركة</Text>
+                      <Text style={styles.text}>الاسم: {selectedCompany.name}</Text>
+                      <Text style={styles.text}>البريد: {selectedCompany.email}</Text>
+                      <Text style={styles.text}>الهاتف: {selectedCompany.phone}</Text>
                       {selectedCompany.address && (
-                        <Text style={styles.detailItem}>
-                          <Text style={styles.detailLabel}>العنوان: </Text>
-                          {selectedCompany.address}
-                        </Text>
+                        <Text style={styles.text}>العنوان: {selectedCompany.address}</Text>
                       )}
                       {selectedCompany.description && (
-                        <Text style={styles.detailItem}>
-                          <Text style={styles.detailLabel}>الوصف: </Text>
-                          {selectedCompany.description}
-                        </Text>
+                        <Text style={styles.text}>الوصف: {selectedCompany.description}</Text>
                       )}
-                      {selectedCompany.createdAt && (
-                        <Text style={styles.detailItem}>
-                          <Text style={styles.detailLabel}>تاريخ التسجيل: </Text>
-                          {new Date(selectedCompany.createdAt).toLocaleDateString()}
-                        </Text>
-                      )}
-                      {/* لو في بيانات إضافية تقدر تضيفها هنا بنفس الأسلوب */}
+                      <View style={styles.buttonsRow}>
+                        <TouchableOpacity
+                          style={[styles.button, styles.approveButton]}
+                          onPress={() => handleCompanyAction(selectedCompany._id, "approve")}
+                        >
+                          <Text style={styles.buttonText}>قبول</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.button, styles.rejectButton]}
+                          onPress={() => handleCompanyAction(selectedCompany._id, "reject")}
+                        >
+                          <Text style={styles.buttonText}>رفض</Text>
+                        </TouchableOpacity>
+                      </View>
                     </>
                   )}
-
-                  <View style={styles.buttonsRow}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.approveButton]}
-                      onPress={() =>
-                        selectedCompany &&
-                        handleAction(selectedCompany._id, "approve")
-                      }
-                    >
-                      <Text style={styles.buttonText}>قبول</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.rejectButton]}
-                      onPress={() =>
-                        selectedCompany &&
-                        handleAction(selectedCompany._id, "reject")
-                      }
-                    >
-                      <Text style={styles.buttonText}>رفض</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={closeDetails}
-                  >
-                    <Text style={styles.closeButtonText}>إغلاق</Text>
+                  <TouchableOpacity onPress={() => setCompanyModalVisible(false)}>
+                    <Text style={styles.closeText}>إغلاق</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </View>
@@ -219,57 +210,74 @@ export default function PendingCompaniesScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </View>
+
+      {/* مودال العرض */}
+      <Modal visible={offerModalVisible} transparent animationType="slide">
+        <TouchableWithoutFeedback onPress={() => setOfferModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <ScrollView>
+                  {selectedOffer && (
+                    <>
+                      <Text style={styles.modalTitle}>{selectedOffer.title}</Text>
+                      <Text style={styles.text}>
+                        النوع: {selectedOffer.type === "image" ? "صورة" : "فيديو"}
+                      </Text>
+                      {selectedOffer.mediaUrl && selectedOffer.type === "image" && (
+                        <Image
+                          source={{ uri: selectedOffer.mediaUrl }}
+                          style={{ width: "100%", height: 200, marginVertical: 10 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      {selectedOffer.mediaUrl && selectedOffer.type === "video" && (
+                        <Text style={styles.text}>📹 رابط الفيديو: {selectedOffer.mediaUrl}</Text>
+                      )}
+                      <View style={styles.buttonsRow}>
+                        <TouchableOpacity
+                          style={[styles.button, styles.approveButton]}
+                          onPress={() => handleOfferAction(selectedOffer._id, "approve")}
+                        >
+                          <Text style={styles.buttonText}>قبول</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.button, styles.rejectButton]}
+                          onPress={() => handleOfferAction(selectedOffer._id, "reject")}
+                        >
+                          <Text style={styles.buttonText}>رفض</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                  <TouchableOpacity onPress={() => setOfferModalVisible(false)}>
+                    <Text style={styles.closeText}>إغلاق</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: colors.background,
-    paddingTop: 60,
-  },
+  container: { flex: 1, padding: 10, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  noDataText: {
-    textAlign: "right",
-    marginTop: 20,
-    fontSize: 16,
-    color: "#777",
-  },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", marginVertical: 10, textAlign: "right" },
+  noDataText: { textAlign: "center", color: colors.gray, marginVertical: 20 },
   card: {
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 16,
-    marginBottom: 12,
-    elevation: 2,
+    marginVertical: 6,
+    elevation: 1,
     alignItems: "flex-end",
   },
-  companyName: {
-    fontWeight: "bold",
-    fontSize: 18,
-    marginBottom: 6,
-    textAlign: "right",
-  },
-  text: {
-    textAlign: "right",
-  },
-  buttonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  button: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 6,
-    alignItems: "center",
-    marginHorizontal: 5,
-  },
-  approveButton: { backgroundColor: "#34d399" },
-  rejectButton: { backgroundColor: "#f87171" },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-
+  title: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
+  text: { fontSize: 14, textAlign: "right", color: colors.gray },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -282,29 +290,30 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "80%",
   },
-  detailsTitle: {
+  modalTitle: {
+    fontSize: 18,
     fontWeight: "bold",
-    fontSize: 22,
-    marginBottom: 15,
     textAlign: "center",
-  },
-  detailItem: {
-    fontSize: 16,
     marginBottom: 10,
-    textAlign: "right",
   },
-  detailLabel: {
-    fontWeight: "bold",
-  },
-  closeButton: {
+  buttonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
     marginTop: 20,
-    backgroundColor: "#f87171",
+  },
+  button: {
     padding: 12,
     borderRadius: 6,
     alignItems: "center",
+    minWidth: 100,
   },
-  closeButtonText: {
-    color: "#fff",
+  approveButton: { backgroundColor: "#34d399" },
+  rejectButton: { backgroundColor: "#f87171" },
+  buttonText: { color: "#fff", fontWeight: "bold" },
+  closeText: {
+    color: colors.primary,
+    textAlign: "center",
     fontWeight: "bold",
+    marginTop: 20,
   },
 });

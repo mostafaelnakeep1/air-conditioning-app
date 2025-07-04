@@ -21,6 +21,8 @@ import { Layout } from "../../constants/layout";
 import apiClient from "../../api/apiClient";
 import { Product } from "../../navigation/types";
 import { useFavorites } from "../../context/FavoritesContext";
+import { useAuth } from "../../context/AuthContext";
+
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -40,6 +42,8 @@ const CategoriesScreen = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const { favorites, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
+  const token = user?.token;
 
   useEffect(() => {
     fetchProducts();
@@ -49,6 +53,9 @@ const CategoriesScreen = () => {
     setLoading(true);
     try {
       const { data } = await apiClient.get("/products/all", {
+        headers: {
+    Authorization: `Bearer ${token}`, // تأكد إن عندك التوكن هنا
+  },
         params: { search, brand, power, minPrice, maxPrice, sortBy },
       });
       setProducts(data.products);

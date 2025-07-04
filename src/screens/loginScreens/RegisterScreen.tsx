@@ -42,7 +42,7 @@ export default function RegisterScreen({
   navigation: RegisterScreenNavigationProp;
 }) {
   const { login } = useAuth();
-
+  const { userToken } = useAuth();
   const [userType, setUserType] = useState<"client" | "company">("client");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -162,24 +162,31 @@ const handleRegister = async () => {
   try {
     setLoading(true);
 
-    const res = await apiClient.post("/register-company", formData, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "multipart/form-data",
-      },
+
+    // التسجيل لا يحتاج توكن
+    const endpoint = userType === "company" ? "/auth/company/register" : "/auth/register";
+
+    const res = await apiClient.post(endpoint, formData, {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+      
     });
 
     const data = res.data;
     console.log("📥 Server response:", res.status, data);
 
     if (userType === "company") {
-      Alert.alert("تم إرسال الطلب", "تم تسجيل الشركة بنجاح، بانتظار موافقة الإدارة.");
-      navigation.replace("MainTabs");
-      return;
+      Alert.alert(
+        "تم إرسال الطلب",
+        "تم تسجيل الشركة بنجاح، بانتظار موافقة الإدارة، يتم التفعيل عادة خلال 48 ساعة ."
+      );
+       } else {
+      Alert.alert("تم التسجيل", "تم إنشاء الحساب بنجاح");
     }
+    navigation.navigate("LoginScreen" as never);
 
-    
-    navigation.replace("MainTabs");
   } catch (err: any) {
     console.log("❌ Error:", err.response?.data || err.message);
     Alert.alert("خطأ", err.response?.data?.message || "تعذر الاتصال بالسيرفر");
@@ -187,6 +194,7 @@ const handleRegister = async () => {
     setLoading(false);
   }
 };
+
 
 
 

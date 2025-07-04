@@ -7,7 +7,7 @@ import type { RootStackParamList } from "./types";
 import SplashScreen from "../screens/loginScreens/SplashScreen";
 import LoginScreen from "../screens/loginScreens/LoginScreen";
 import RegisterScreen from "../screens/loginScreens/RegisterScreen";
-
+import ForgotPasswordScreen from "../screens/loginScreens/ForgotPasswordScreen";
 import BottomTabNavigator from "./BottomTabNavigator";
 import { useAuth } from "../context/AuthContext";
 
@@ -38,6 +38,7 @@ export default function RootNavigator() {
         <>
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
           <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen}  />
         </>
       ) : (
         <Stack.Screen name="MainApp" component={BottomTabNavigator} />

@@ -14,6 +14,7 @@ import OrderDetailsScreen from "../profileScreens/OrderDetailsScreen";
 import CompanyDetailsScreen from "../profileScreens/CompanyDetailsScreen";
 import LoginScreen from "../loginScreens/LoginScreen";
 import FavoritesScreen from "../profileScreens/FavoritesScreen";
+import ForgotPasswordScreen from "../loginScreens/ForgotPasswordScreen";
 import { ProfileStackParamList } from "../../navigation/types";
 
 
@@ -33,6 +34,8 @@ export default function ProfileStack() {
       <Stack.Screen name="InviteFriend" component={InviteFriendScreen} />
       <Stack.Screen name="LoginScreen" component={LoginScreen} />
       <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
+      
+
     </Stack.Navigator>
   );
 }

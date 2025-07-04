@@ -21,7 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function JoinOffersScreen() {
   const { user, token } = useAuth();
-  const [offerType, setOfferType] = useState<"text" | "image" | "video">("text");
+  const [offerType, setOfferType] = useState<"image" | "video">("image");
 
   const [offerTitle, setOfferTitle] = useState("");
   const [oldPrice, setOldPrice] = useState("");
@@ -107,7 +107,7 @@ const handleSubmit = async () => {
         <Text style={styles.header}>انضم للعروض</Text>
 
         <View style={styles.offerTypeRow}>
-          {["text", "image", "video"].map((type) => (
+          {["image", "video"].map((type) => (
             <TouchableOpacity
               key={type}
               style={[
@@ -132,56 +132,7 @@ const handleSubmit = async () => {
           placeholderTextColor={colors.gray}
         />
 
-        {offerType === "text" && (
-          <>
-            <Text style={styles.label}>السعر السابق</Text>
-            <TextInput
-              style={styles.input}
-              value={oldPrice}
-              onChangeText={setOldPrice}
-              keyboardType="numeric"
-              placeholder="مثال: ١٠٠٠٠"
-              placeholderTextColor={colors.gray}
-            />
-            <Text style={styles.label}>السعر الحالي</Text>
-            <TextInput
-              style={styles.input}
-              value={newPrice}
-              onChangeText={setNewPrice}
-              keyboardType="numeric"
-              placeholder="مثال: ٩٠٠٠"
-              placeholderTextColor={colors.gray}
-            />
-            <Text style={styles.label}>نسبة الخصم</Text>
-            <TextInput
-              style={styles.input}
-              value={discount}
-              onChangeText={setDiscount}
-              keyboardType="numeric"
-              placeholder="مثال: 10%"
-              placeholderTextColor={colors.gray}
-            />
-            <Text style={styles.label}>مدة العرض (أيام)</Text>
-            <TextInput
-              style={styles.input}
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="numeric"
-              placeholder="مثال: ٧"
-              placeholderTextColor={colors.gray}
-            />
-            <Text style={styles.label}>تفاصيل إضافية</Text>
-            <TextInput
-              style={[styles.input, styles.multiline]}
-              value={details}
-              onChangeText={setDetails}
-              multiline
-              numberOfLines={4}
-              placeholder="اكتب تفاصيل إضافية عن العرض"
-              placeholderTextColor={colors.gray}
-            />
-          </>
-        )}
+        
 
         {(offerType === "image" || offerType === "video") && (
           <>
@@ -243,7 +194,7 @@ const styles = StyleSheet.create({
   },
   offerTypeRow: {
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     marginBottom: Layout.height(2),
   },
   typeButton: {

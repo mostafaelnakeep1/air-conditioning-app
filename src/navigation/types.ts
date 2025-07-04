@@ -75,12 +75,13 @@ export type RootStackParamList = {
   UserInfo: undefined;
   OrdersHistory: undefined;
   PreviousCompanies: undefined;
-  
   SavedAddresses: undefined;
   ContactUs: undefined;
   InviteFriend: undefined;
   FavoritesScreen: undefined;
   ProfileMain: undefined;
+  
+  ForgotPasswordScreen: undefined;
 };
 
 
@@ -105,3 +106,5 @@ export type HomeStackParamList = {
   AllVendorsScreen: undefined; // ✅ أضف ده هنا
   // باقي الشاشات...
 };
+
+

@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from "react-native";
-import colors from "../../constants/colors";
-import { Layout } from "../../constants/layout";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  ImageBackground,
+} from "react-native";
+import DraggableFlatList, { RenderItemParams } from "react-native-draggable-flatlist";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../navigation/types";
+import { MaterialIcons } from "@expo/vector-icons";
+import colors from "../../constants/colors";
+import { Layout } from "../../constants/layout";
 import apiClient from "../../api/apiClient";
-
-import { differenceInDays, format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { differenceInDays } from "date-fns";
 
 type NavigationProp = StackNavigationProp<RootStackParamList, "ManageCompaniesScreen">;
 
@@ -16,7 +23,8 @@ interface Company {
   _id: string;
   name: string;
   createdAt: string;
-  subscriptionEnd: string; // تاريخ نهاية الاشتراك
+  subscriptionEnd: string;
+  image?: string;
 }
 
 export default function ManageCompaniesScreen() {
@@ -30,10 +38,40 @@ export default function ManageCompaniesScreen() {
   const fetchCompanies = async () => {
     try {
       const res = await apiClient.get("/admin/companies");
+      console.log("✅ Response data:", res.data);
       setCompanies(res.data);
     } catch (error) {
       console.error("Fetch companies error:", error);
+      
       Alert.alert("خطأ", "حدث خطأ في جلب بيانات الشركات");
+    }
+  };
+const getTopVendors = () => {
+  return companies
+    .filter(item => differenceInDays(new Date(item.subscriptionEnd), new Date()) > 0) // شرط الاشتراك شغال
+    .slice(0, 10) // أول 10 شركات كما هي
+    .map(item => ({
+      id: item._id,
+      name: item.name,
+      image: item.image || "https://picsum.photos/600/400",
+      location: "الموقع غير محدد",
+      rating: 4,
+      address: "العنوان غير متوفر",
+      phone: "0500000000",
+      clientsCount: Math.floor(Math.random() * 100) + 50,
+    }));
+};
+
+
+
+  const handlePause = async (companyId: string) => {
+  try {
+    await apiClient.post(`/admin/companies/${companyId}/pause`);
+    Alert.alert("⏸️", "تم تعليق الشركة بنجاح");
+    fetchCompanies();
+    } catch (error) {
+      console.error("Pause error:", error);
+      Alert.alert("خطأ", "حدث خطأ أثناء تعليق الشركة");
     }
   };
 
@@ -48,26 +86,52 @@ export default function ManageCompaniesScreen() {
     }
   };
 
-  const renderCompany = ({ item }: { item: Company }) => {
-    const remainingDays = differenceInDays(new Date(item.subscriptionEnd), new Date());
+  const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<Company>) => {
+    const index = getIndex?.() ?? 0;
+    const remainingDays = Math.max(0, differenceInDays(new Date(item.subscriptionEnd), new Date()));
+
     return (
       <TouchableOpacity
-        style={styles.card}
         onPress={() => navigation.navigate("CompanyDetailsScreen", { companyId: item._id })}
+        onLongPress={drag}
+        delayLongPress={100}
+        style={[styles.card, isActive && { opacity: 0.85 }]}
       >
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.date}>
-          انضم بتاريخ: {format(new Date(item.createdAt), "PPP")}
-        </Text>
-        <Text style={styles.remainingDays}>
-          باقي {remainingDays} يوم من أصل 30 يوم
-        </Text>
-        <TouchableOpacity
-          style={styles.extendButton}
-          onPress={() => handleExtend(item._id)}
+        <ImageBackground
+          source={item.image ? { uri: item.image } : require("../../imags/R.webp")}
+          style={styles.imageBackground}
+          imageStyle={{ borderRadius: Layout.width(3) }}
         >
-          <Text style={styles.extendButtonText}>تمديد 30 يوم إضافية</Text>
-        </TouchableOpacity>
+          <View style={styles.overlay}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.serial}>{index + 1}.</Text>
+              <TouchableOpacity onLongPress={drag}>
+                <MaterialIcons name="drag-handle" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.rowBetween}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.remainingDays}>باقي {remainingDays} يوم</Text>
+            </View>
+
+            <View style={[styles.rowBetween, { marginTop: Layout.height(1.5) }]}>
+              
+              <TouchableOpacity
+                style={styles.extendButton}
+                onPress={() => handleExtend(item._id)}
+              >
+                <Text style={styles.extendButtonText}>تمديد 30 يوم</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.pauseButton}
+                onPress={() => handlePause(item._id)}
+              >
+                <Text style={styles.pauseButtonText}>تعليق الشركة</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ImageBackground>
       </TouchableOpacity>
     );
   };
@@ -75,11 +139,12 @@ export default function ManageCompaniesScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🏢 إدارة الشركات</Text>
-      <FlatList
+      <DraggableFlatList
         data={companies}
         keyExtractor={(item) => item._id}
-        renderItem={renderCompany}
-        contentContainerStyle={{ paddingBottom: 20, direction: "rtl" }}
+        renderItem={renderItem}
+        onDragEnd={({ data }) => setCompanies(data)}
+        contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -91,6 +156,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: Layout.width(4),
+    paddingVertical: Layout.height(6)
   },
   title: {
     fontSize: Layout.font(3.5),
@@ -100,39 +166,62 @@ const styles = StyleSheet.create({
     color: colors.black,
   },
   card: {
-    backgroundColor: colors.white,
-    padding: Layout.height(2),
     borderRadius: Layout.width(3),
     marginBottom: Layout.height(1.5),
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    overflow: "hidden",
     elevation: 2,
+  },
+  imageBackground: {
+    width: "100%",
+    height: Layout.height(13),
+    justifyContent: "flex-end",
+  },
+  overlay: {
+    backgroundColor: "rgba(109, 108, 108, 0.4)",
+    paddingVertical: Layout.height(0.5),
+    paddingHorizontal: Layout.width(3),
+  },
+  serial: {
+    fontSize: Layout.font(2.3),
+    fontWeight: "bold",
+    color: "#fff",
   },
   name: {
     fontSize: Layout.font(2.5),
-    fontWeight: "600",
-    color: colors.black,
-  },
-  date: {
-    fontSize: Layout.font(2),
-    color: colors.gray,
-    marginTop: 5,
+    fontWeight: "bold",
+    color: "#fff",
   },
   remainingDays: {
     fontSize: Layout.font(2),
-    color: colors.primary,
-    marginTop: 5,
+    color: "#fff",
   },
   extendButton: {
-    marginTop: 10,
     backgroundColor: colors.primary,
-    paddingVertical: Layout.height(1.2),
+    opacity: 0.9,
+    paddingVertical: Layout.height(1),
+    paddingHorizontal: Layout.width(4),
     borderRadius: Layout.width(2),
-    alignItems: "center",
   },
   extendButtonText: {
     color: colors.white,
+    fontWeight: "bold",
+    fontSize: Layout.font(2),
+  },
+  rowBetween: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pauseButton: {
+  backgroundColor: "#D9534F", // أحمر
+  
+  paddingVertical: Layout.height(1),
+  paddingHorizontal: Layout.width(4),
+  borderRadius: Layout.width(2),
+  },
+
+  pauseButtonText: {
+    color: "#fff",
     fontWeight: "bold",
     fontSize: Layout.font(2),
   },

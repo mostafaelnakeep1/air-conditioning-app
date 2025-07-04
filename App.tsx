@@ -12,6 +12,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import LoadingOverlay from "./src/screens/LoadingOverlay";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 
 I18nManager.allowRTL(true);
@@ -29,20 +30,22 @@ export default function App() {
   useRegisterPushToken(userToken ?? "");
 
   return (
-    <AuthProvider>
-      <AdsProvider>
-        <FavoritesProvider>
-      <LoadingProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
-          <LoadingOverlayWrapper />
-        </SafeAreaProvider>
-      </LoadingProvider>
-      </FavoritesProvider>
-      </AdsProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <AdsProvider>
+          <FavoritesProvider>
+        <LoadingProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <RootNavigator />
+            </NavigationContainer>
+            <LoadingOverlayWrapper />
+          </SafeAreaProvider>
+        </LoadingProvider>
+        </FavoritesProvider>
+        </AdsProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 

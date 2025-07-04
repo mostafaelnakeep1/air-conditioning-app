@@ -16,4 +16,11 @@ export const setClientToken = (token: string | null) => {
   }
 };
 
+apiClient.interceptors.request.use((config) => {
+  console.log("📤 API REQUEST TO:", config.url);
+  console.log("📤 AUTHORIZATION:", config.headers.Authorization);
+  return config;
+});
+
+
 export default apiClient;

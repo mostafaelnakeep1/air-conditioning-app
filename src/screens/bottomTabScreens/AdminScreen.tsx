@@ -26,7 +26,7 @@ export default function AdminHomeScreen() {
     { title: "الإعلانات", screen: "AdsManagementScreen" },
     { title: "ترقية مستخدم", screen: "PromoteUser" },
     { title: "إنشاء إشعار", screen: "AdminSendNotificationScreen" },
-    { title: "الشركات المعلقة", screen: "PendingCompaniesScreen" },
+    { title: "الشركات والعروض المعلقة", screen: "PendingCompaniesScreen" },
     { title: "تقارير التطبيق", screen: "AdminReports" },
   ];
 

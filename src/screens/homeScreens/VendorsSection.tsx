@@ -23,7 +23,7 @@ import { I18nManager } from "react-native";
 I18nManager.forceRTL(true);
 const screenWidth = Dimensions.get("window").width;
 
-type Vendor = {
+export type Vendor = {
   id: string;
   name: string;
   image: string;
@@ -32,18 +32,8 @@ type Vendor = {
   address?: string;
   phone?: string;
   clientsCount?: number;
+  logo?: string;
 };
-
-const vendors: Vendor[] = new Array(10).fill(null).map((_, i) => ({
-  id: (i + 1).toString(),
-  name: `شركة التكييف ${i + 1}`,
-  image: "https://picsum.photos/600/400?random=" + (i + 10),
-  location: "الرياض - السعودية",
-  rating: Math.floor(Math.random() * 3) + 3,
-  address: "الرياض، شارع التبريد",
-  phone: "0501234567",
-  clientsCount: 120 + i,
-}));
 
 const groupItemsInPairs = (items: Vendor[]): (Vendor | undefined)[][] => {
   const grouped: (Vendor | undefined)[][] = [];
@@ -53,15 +43,28 @@ const groupItemsInPairs = (items: Vendor[]): (Vendor | undefined)[][] => {
   return grouped;
 };
 
-const groupedVendors = groupItemsInPairs(vendors);
-
 const cardWidth = screenWidth * 0.6;
 const cardHeight = Layout.height(15);
 
-export default function VendorsSection() {
+type Props = {
+  vendors: Vendor[];
+};
+
+export default function VendorsSection({ vendors }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const modalScale = useRef(new Animated.Value(0)).current;
+
+   if (!vendors || vendors.length === 0) {
+    return (
+      <View style={{ padding: Layout.height(2) }}>
+        <Text style={{ textAlign: 'center', color: colors.gray, fontSize: Layout.font(2) }}>
+          لا توجد شركات للعرض حاليًا
+        </Text>
+      </View>
+    );
+  }
+  const groupedVendors = groupItemsInPairs(vendors || []);
 
   const showModal = (vendor: Vendor) => {
     setSelectedVendor(vendor);
@@ -80,15 +83,14 @@ export default function VendorsSection() {
   };
 
   const callPhone = (phone: string) => {
-  const phoneNumber = `tel:${phone}`;
-  Linking.openURL(phoneNumber);
-};
+    const phoneNumber = `tel:${phone}`;
+    Linking.openURL(phoneNumber);
+  };
 
-const openWhatsApp = (phone: string) => {
-  const url = `https://wa.me/${phone.replace(/^0/, "966")}`; // كود السعودية
-  Linking.openURL(url);
-};
-
+  const openWhatsApp = (phone: string) => {
+    const url = `https://wa.me/${phone.replace(/^0/, "966")}`;
+    Linking.openURL(url);
+  };
 
   return (
     <View style={styles.container}>
@@ -120,7 +122,7 @@ const openWhatsApp = (phone: string) => {
                     style={styles.card}
                   >
                     <ImageBackground
-                      source={{ uri: vendor.image }}
+                      source={vendor.logo ? { uri: vendor.logo } : require("../../imags/R.webp")}
                       style={styles.imageBackground}
                       imageStyle={{ borderRadius: Layout.width(4) }}
                     >
@@ -167,7 +169,7 @@ const openWhatsApp = (phone: string) => {
           <TouchableWithoutFeedback onPress={hideModal}>
             <View style={modalStyles.modalOverlay}>
               <TouchableWithoutFeedback>
-                <Animated.View style={[modalStyles.modalCard, { transform: [{ scale: modalScale }], direction: "rtl" }, ]}>
+                <Animated.View style={[modalStyles.modalCard, { transform: [{ scale: modalScale }], direction: "rtl" }]}>
                   <ScrollView>
                     <ImageBackground
                       source={{ uri: selectedVendor?.image }}
@@ -205,7 +207,7 @@ const openWhatsApp = (phone: string) => {
                       </View>
                       <View style={modalStyles.buttonsRow}>
                         <TouchableOpacity
-                          style={[modalStyles.actionButton, { backgroundColor: colors.primary }, { direction: "rtl" }]}
+                          style={[modalStyles.actionButton, { backgroundColor: colors.primary }]}
                           onPress={() => callPhone(selectedVendor.phone!)}
                         >
                           <Text style={modalStyles.actionButtonText}>اتصال</Text>
@@ -218,7 +220,6 @@ const openWhatsApp = (phone: string) => {
                           <Text style={modalStyles.actionButtonText}>واتساب</Text>
                         </TouchableOpacity>
                       </View>
-
                     </View>
                   </ScrollView>
                 </Animated.View>
@@ -230,6 +231,7 @@ const openWhatsApp = (phone: string) => {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

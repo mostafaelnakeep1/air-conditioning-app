@@ -22,6 +22,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userType, setUserType] = useState<"client" | "company">("client");
+
   
   // لو مخزن بيانات مستخدم سابق في AsyncStorage، نعبيهم
   useEffect(() => {
@@ -41,6 +43,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   }, []);
 
 const handleLogin = async () => {
+
+
   if (!email || !password) {
     Alert.alert("خطأ", "من فضلك أدخل البريد الإلكتروني وكلمة المرور");
     return;
@@ -49,27 +53,32 @@ const handleLogin = async () => {
   setLoading(true);
 
   try {
-    const res = await apiClient.post("/auth/login", { email, password });
+    // ✅ تحديد المسار حسب نوع المستخدم
+    const endpoint = userType === "company" ? "/auth/company/login" : "/auth/login";
+
+    const res = await apiClient.post(endpoint, { email, password });
 
     const data = res.data;
 
-    if (data.user?.role === "company") {
-      if (data.user.status === "pending") {
-        Alert.alert("طلب تحت المراجعة", "طلبك قيد المراجعة من الإدارة، وسيتم إعلامك بعد القبول أو الرفض");
-        setLoading(false);
-        return;
-      }
+    // ✅ لو المستخدم شركة، افحص حالة الحساب
+    if (userType === "company") {
+      if (data.user?.status !== "active") {
+        if (data.user.status === "pending") {
+          Alert.alert("طلب تحت المراجعة", "طلبك قيد المراجعة من الإدارة، وسيتم إعلامك بعد القبول أو الرفض");
+          setLoading(false);
+          return;
+        }
 
-      if (data.user.status === "rejected") {
-        Alert.alert("طلب مرفوض", "تم رفض طلب انضمامك، لمزيد من التفاصيل تواصل مع الدعم");
-        setLoading(false);
-        return;
+        if (data.user.status === "rejected") {
+          Alert.alert("طلب مرفوض", "تم رفض طلب انضمامك، لمزيد من التفاصيل تواصل مع الدعم");
+          setLoading(false);
+          return;
+        }
       }
     }
 
-    // حقن التوكن في axios
+    // ✅ حفظ البيانات والتوكن
     login(data.user, data.token);
-
     console.log("🚨 USER DATA:", data.user);
 
     await AsyncStorage.setItem("userData", JSON.stringify(data.user));
@@ -114,6 +123,11 @@ const handleLogin = async () => {
         value={password}
         onChangeText={setPassword}
       />
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPasswordScreen")}>
+        <Text style={styles.forgotText}>نسيت كلمة المرور؟</Text>
+      </TouchableOpacity>
+
+
 
       <View style={styles.rememberContainer}>
         <Text style={styles.rememberText}>تذكرني</Text>
@@ -162,6 +176,14 @@ const styles = StyleSheet.create({
     marginBottom: Layout.height(2),
     color: "#000",
   },
+  forgotText: {
+    color: colors.primary,
+    fontSize: Layout.font(1.8),
+    textDecorationLine: "underline",
+    alignSelf: "flex-end",
+    marginBottom: Layout.height(1),
+  },
+
   rememberContainer: {
     flexDirection: "row-reverse",
     alignItems: "center",
