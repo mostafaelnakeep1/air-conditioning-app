@@ -37,12 +37,12 @@ const styles = StyleSheet.create({
     paddingVertical: Layout.height(4),
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(4),
     paddingHorizontal: Layout.width(5),
     paddingVertical: Layout.height(5),
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     minWidth: Layout.width(40),
   },
   buttonText: {
-    color: "#fff",
+    color: colors.white,
     fontSize: Layout.font(2.7),
     textAlign: "center",
     fontWeight: "600",

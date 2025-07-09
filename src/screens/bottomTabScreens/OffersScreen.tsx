@@ -1,92 +1,170 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  FlatList,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
+import apiClient from "../../api/apiClient";
+import { useAuth } from "../../context/AuthContext";
+import { Video, ResizeMode } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
+import { jwtDecode } from "jwt-decode";
 
-// بيانات وهمية
-const offers = [
-  {
-    id: 1,
-    title: "خصم 20% على تكييف شارب",
-    company: "شركة المستقبل",
-    expires: "حتى 30 يونيو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg" ,
-  },
-  {
-    id: 2,
-    title: "تركيب مجاني عند شراء LG",
-    company: "الرواد للتكييف",
-    expires: "حتى 15 يوليو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg",
-  },
-  {
-    id: 3,
-    title: "خصم 20% على تكييف شارب",
-    company: "شركة المستقبل",
-    expires: "حتى 30 يونيو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg" ,
-  },
-  {
-    id: 4,
-    title: "تركيب مجاني عند شراء LG",
-    company: "الرواد للتكييف",
-    expires: "حتى 15 يوليو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg",
-  },
-  {
-    id: 5,
-    title: "خصم 20% على تكييف شارب",
-    company: "شركة المستقبل",
-    expires: "حتى 30 يونيو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg" ,
-  },
-  {
-    id: 6,
-    title: "تركيب مجاني عند شراء LG",
-    company: "الرواد للتكييف",
-    expires: "حتى 15 يوليو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg",
-  },
-  {
-    id: 7,
-    title: "خصم 20% على تكييف شارب",
-    company: "شركة المستقبل",
-    expires: "حتى 30 يونيو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg" ,
-  },
-  {
-    id: 8,
-    title: "تركيب مجاني عند شراء LG",
-    company: "الرواد للتكييف",
-    expires: "حتى 15 يوليو",
-    image: "https://cdn.pixabay.com/photo/2020/05/26/08/50/air-conditioner-5222620_960_720.jpg",
-  },
-];
+type Offer = {
+  _id: string;
+  title: string;
+  company: { name: string };
+  expiresAt?: string;
+  mediaUrl?: string;
+};
 
 export default function OffersScreen() {
+  const { userToken } = useAuth();
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const isAdmin = (() => {
+    try {
+      const decoded: any = jwtDecode(userToken || "");
+      return decoded.role === "admin";
+    } catch {
+      return false;
+    }
+  })();
+
+  const fetchApprovedOffers = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get("/offers/approved", {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      setOffers(res.data.offers);
+    } catch (error) {
+      Alert.alert("خطأ", "فشل جلب العروض");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!userToken) return;
+    fetchApprovedOffers();
+  }, [userToken]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (offers.length === 0) {
+    return (
+      <ScrollView contentContainerStyle={styles.noDataContainer}>
+        <Text style={styles.noDataText}>لا توجد عروض متاحة حالياً</Text>
+      </ScrollView>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>العروض المتاحة</Text>
-
-
-  
-    
-
-
-
-      {offers.map((offer) => (
-        <View key={offer.id} style={styles.card}>
-          <Image source={{ uri: offer.image }} style={styles.image} />
-          <View style={styles.textContainer}>
-            <Text style={styles.cardTitle}>{offer.title}</Text>
-            <Text style={styles.cardCompany}>مقدم من: {offer.company}</Text>
-            <Text style={styles.cardDate}>{offer.expires}</Text>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
+    <FlatList
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      data={offers}
+      keyExtractor={(item) => item._id}
+      renderItem={({ item }) => (
+        <OfferCard item={item} isAdmin={isAdmin} userToken={userToken} onDeleted={fetchApprovedOffers} />
+      )}
+      showsVerticalScrollIndicator={false}
+    />
   );
 }
+
+const OfferCard = ({
+  item,
+  isAdmin,
+  userToken,
+  onDeleted,
+}: {
+  item: Offer;
+  isAdmin: boolean;
+  userToken: string | null | undefined;
+  onDeleted: () => void;
+}) => {
+  const [isMuted, setIsMuted] = useState(true);
+  const isVideo = item.mediaUrl?.endsWith(".mp4");
+  const mediaUrl = item.mediaUrl || "https://via.placeholder.com/300x200";
+
+  const handleDelete = () => {
+    Alert.alert("تأكيد الحذف", "هل أنت متأكد من حذف هذا العرض؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "حذف",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await apiClient.delete(`/offers/${item._id}`, {
+              headers: { Authorization: `Bearer ${userToken}` },
+            });
+            Alert.alert("تم الحذف", "تم حذف العرض بنجاح");
+            onDeleted();
+          } catch (err) {
+            Alert.alert("خطأ", "فشل في حذف العرض");
+          }
+        },
+      },
+    ]);
+  };
+
+  return (
+    <View style={styles.card}>
+      {isVideo ? (
+        <View style={{ position: "relative", width: "100%", height: 200 }}>
+          <Video
+            source={{ uri: mediaUrl }}
+            style={styles.media}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+            isMuted={isMuted}
+          />
+          <TouchableOpacity
+            onPress={() => setIsMuted((prev) => !prev)}
+            style={styles.soundButton}
+          >
+            <Ionicons
+              name={isMuted ? "volume-mute" : "volume-high"}
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <Image source={{ uri: mediaUrl }} style={styles.media} resizeMode="cover" />
+      )}
+      <View >
+        {/* <Text style={{ fontWeight: "bold", fontSize: 16 }}>{item.title}</Text>
+        <Text style={{ color: colors.gray, marginTop: 4 }}>
+          من: {item.company?.name || "غير معروف"}
+        </Text> */}
+        {isAdmin && (
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+            <Text style={{ color: "#fff" }}>حذف العرض</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -97,19 +175,28 @@ const styles = StyleSheet.create({
   content: {
     padding: Layout.width(4),
   },
-  title: {
-    fontSize: Layout.font(2.4),
-    fontWeight: "bold",
-    marginBottom: Layout.height(2),
-    textAlign: "right",
-    color: colors.primary,
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
+  },
+  noDataContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Layout.width(4),
+  },
+  noDataText: {
+    fontSize: Layout.font(2),
+    color: colors.gray,
   },
   card: {
-    flexDirection: "row-reverse", // علشان RTL
+    width: "100%",
     backgroundColor: "#F9FAFB",
-    padding: Layout.width(3),
     borderRadius: Layout.width(3),
     marginBottom: Layout.height(2),
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -117,33 +204,24 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 0.1,
     borderColor: colors.black,
+  },
+  media: {
+    width: "100%",
+    height: 200,
+  },
+  soundButton: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 8,
+    borderRadius: 20,
+  },
+  deleteButton: {
+    backgroundColor: "#D11A2A",
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 10,
     alignItems: "center",
-  },
-  image: {
-    width: Layout.width(24),
-    height: Layout.width(24),
-    borderRadius: Layout.width(2),
-    marginLeft: Layout.width(3),
-  },
-  textContainer: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: Layout.font(2.2),
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: Layout.height(0.5),
-    textAlign: "right",
-  },
-  cardCompany: {
-    fontSize: Layout.font(1.8),
-    color: "#4B5563",
-    marginBottom: Layout.height(0.3),
-    textAlign: "right",
-  },
-  cardDate: {
-    fontSize: Layout.font(1.6),
-    color: "#9CA3AF",
-    textAlign: "right",
   },
 });

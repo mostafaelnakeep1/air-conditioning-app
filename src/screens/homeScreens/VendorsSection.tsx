@@ -55,7 +55,7 @@ export default function VendorsSection({ vendors }: Props) {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const modalScale = useRef(new Animated.Value(0)).current;
 
-   if (!vendors || vendors.length === 0) {
+  if (!vendors || vendors.length === 0) {
     return (
       <View style={{ padding: Layout.height(2) }}>
         <Text style={{ textAlign: 'center', color: colors.gray, fontSize: Layout.font(2) }}>
@@ -64,6 +64,7 @@ export default function VendorsSection({ vendors }: Props) {
       </View>
     );
   }
+
   const groupedVendors = groupItemsInPairs(vendors || []);
 
   const showModal = (vendor: Vendor) => {
@@ -109,8 +110,8 @@ export default function VendorsSection({ vendors }: Props) {
         decelerationRate="fast"
         snapToAlignment="start"
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: Layout.width(3) }}
-        inverted
+        contentContainerStyle={{ paddingHorizontal: Layout.width(3), flexDirection: "row-reverse" }}
+        inverted={true}
         renderItem={({ item }) => (
           <View style={styles.column}>
             {item.map(
@@ -122,7 +123,7 @@ export default function VendorsSection({ vendors }: Props) {
                     style={styles.card}
                   >
                     <ImageBackground
-                      source={vendor.logo ? { uri: vendor.logo } : require("../../imags/R.webp")}
+                      source={{ uri: vendor.logo || vendor.image || "https://via.placeholder.com/600" }}
                       style={styles.imageBackground}
                       imageStyle={{ borderRadius: Layout.width(4) }}
                     >
@@ -135,10 +136,7 @@ export default function VendorsSection({ vendors }: Props) {
                             <Text
                               key={idx}
                               style={{
-                                color:
-                                  idx < vendor.rating
-                                    ? colors.gold
-                                    : colors.white,
+                                color: idx < vendor.rating ? colors.gold : colors.white,
                                 fontSize: Layout.font(1.8),
                               }}
                             >
@@ -163,62 +161,75 @@ export default function VendorsSection({ vendors }: Props) {
         )}
       />
 
-      {/* مودال التفاصيل */}
-      <Modal visible={selectedVendor !== null} transparent animationType="none" presentationStyle="overFullScreen">
+      {/* Modal */}
+      <Modal visible={selectedVendor !== null} transparent animationType="none">
         {selectedVendor && (
           <TouchableWithoutFeedback onPress={hideModal}>
-            <View style={modalStyles.modalOverlay}>
+            <View style={styles.modalOverlay}>
               <TouchableWithoutFeedback>
-                <Animated.View style={[modalStyles.modalCard, { transform: [{ scale: modalScale }], direction: "rtl" }]}>
+                <Animated.View style={[styles.modalCard, { transform: [{ scale: modalScale }] }]}>
                   <ScrollView>
                     <ImageBackground
-                      source={{ uri: selectedVendor?.image }}
-                      style={modalStyles.modalImage}
+                      source={{ uri: selectedVendor.logo || selectedVendor.image || "https://picsum.photos/600" }}
+                      style={styles.modalImage}
                       imageStyle={{ borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
                     >
-                      <View style={modalStyles.detailsOverlay} />
-                      <Text style={modalStyles.detailsName}>{selectedVendor?.name}</Text>
+                      <View style={styles.detailsOverlay} />
+                      <Text style={styles.detailsName}>{selectedVendor.name}</Text>
                     </ImageBackground>
 
-                    <View style={modalStyles.detailsContent}>
-                      <Text style={modalStyles.detailsLabel}>العنوان:</Text>
-                      <Text style={modalStyles.detailsText}>{selectedVendor?.address}</Text>
+                    <View style={styles.detailsContent}>
+                      {selectedVendor.address && (
+                        <>
+                          <Text style={styles.detailsLabel}>العنوان:</Text>
+                          <Text style={styles.detailsText}>{selectedVendor.address}</Text>
+                        </>
+                      )}
 
-                      <Text style={modalStyles.detailsLabel}>رقم الهاتف:</Text>
-                      <Text style={modalStyles.detailsText}>{selectedVendor?.phone}</Text>
+                      {selectedVendor.phone && (
+                        <>
+                          <Text style={styles.detailsLabel}>رقم الهاتف:</Text>
+                          <Text style={styles.detailsText}>{selectedVendor.phone}</Text>
+                        </>
+                      )}
 
-                      <Text style={modalStyles.detailsLabel}>عدد العملاء:</Text>
-                      <Text style={modalStyles.detailsText}>{selectedVendor?.clientsCount}</Text>
+                      {selectedVendor.clientsCount !== undefined && (
+                        <>
+                          <Text style={styles.detailsLabel}>عدد العملاء:</Text>
+                          <Text style={styles.detailsText}>{selectedVendor.clientsCount}</Text>
+                        </>
+                      )}
 
-                      <Text style={modalStyles.detailsLabel}>التقييم:</Text>
-                      <View style={modalStyles.ratingRow}>
+                      <Text style={styles.detailsLabel}>التقييم:</Text>
+                      <View style={styles.ratingRow}>
                         {[...Array(5)].map((_, i) => (
                           <Text
                             key={i}
-                            style={
-                              i < selectedVendor.rating
-                                ? modalStyles.star
-                                : modalStyles.starInactive
-                            }
+                            style={i < selectedVendor.rating ? styles.star : styles.starInactive}
                           >
                             ★
                           </Text>
                         ))}
                       </View>
-                      <View style={modalStyles.buttonsRow}>
-                        <TouchableOpacity
-                          style={[modalStyles.actionButton, { backgroundColor: colors.primary }]}
-                          onPress={() => callPhone(selectedVendor.phone!)}
-                        >
-                          <Text style={modalStyles.actionButtonText}>اتصال</Text>
-                        </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={[modalStyles.actionButton, { backgroundColor: "#25D366" }]}
-                          onPress={() => openWhatsApp(selectedVendor.phone!)}
-                        >
-                          <Text style={modalStyles.actionButtonText}>واتساب</Text>
-                        </TouchableOpacity>
+                      <View style={styles.buttonsRow}>
+                        {selectedVendor.phone && (
+                          <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                            onPress={() => callPhone(selectedVendor.phone!)}
+                          >
+                            <Text style={styles.actionButtonText}>اتصال</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {selectedVendor.phone && (
+                          <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: "#25D366" }]}
+                            onPress={() => openWhatsApp(selectedVendor.phone!)}
+                          >
+                            <Text style={styles.actionButtonText}>واتساب</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   </ScrollView>
@@ -231,7 +242,6 @@ export default function VendorsSection({ vendors }: Props) {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -318,10 +328,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: colors.white,
   },
-});
-
-// التنسيقات الخاصة بالمودال
-const modalStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -347,13 +353,7 @@ const modalStyles = StyleSheet.create({
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
     overflow: "hidden",
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
   },
-
   detailsOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -365,7 +365,6 @@ const modalStyles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     textAlign: "right",
-      writingDirection: "rtl",
   },
   detailsContent: {
     paddingHorizontal: Layout.width(5),
@@ -378,31 +377,11 @@ const modalStyles = StyleSheet.create({
     marginBottom: Layout.height(0.5),
     textAlign: "right",
     color: colors.primary,
-      writingDirection: "rtl",
   },
   detailsText: {
     fontSize: Layout.font(1.9),
     color: colors.black,
     textAlign: "right",
-      writingDirection: "rtl",
-  },
-  ratingRow: {
-    flexDirection: "row-reverse",
-    marginTop: Layout.height(1),
-  },
-  star: {
-    color: colors.gold,
-    fontSize: Layout.font(2.2),
-  },
-  starInactive: {
-    color: "#ccc",
-    fontSize: Layout.font(2.2),
-  },
-  buttonsRow: {
-  flexDirection: "row-reverse",
-  justifyContent: "space-around",
-  marginTop: Layout.height(3),
-  paddingBottom: Layout.height(2),
   },
   actionButton: {
     flexDirection: "row-reverse",
@@ -417,5 +396,13 @@ const modalStyles = StyleSheet.create({
     fontSize: Layout.font(1.9),
     fontWeight: "bold",
     marginRight: Layout.width(2),
+  },
+  star: {
+    color: colors.gold,
+    fontSize: Layout.font(1.8),
+  },
+  starInactive: {
+    color: "#ccc",
+    fontSize: Layout.font(1.8),
   },
 });

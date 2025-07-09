@@ -63,12 +63,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(4),
     padding: Layout.width(5),
     width: "100%",
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#f1f1f1",
+    backgroundColor: colors.white,
     padding: Layout.width(4),
     borderRadius: Layout.width(3),
     marginBottom: Layout.height(2),
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     minWidth: Layout.width(40),
   },
   buttonText: {
-    color: "#fff",
+    color: colors.white,
     fontSize: Layout.font(2.3),
     fontWeight: "600",
     textAlign: "center",

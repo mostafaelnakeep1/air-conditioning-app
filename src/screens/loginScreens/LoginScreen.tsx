@@ -168,13 +168,13 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    backgroundColor: "#f2f2f2",
+    backgroundColor: colors.white,
     paddingVertical: Layout.height(1.5),
     paddingHorizontal: Layout.width(3),
     borderRadius: Layout.width(2),
     fontSize: Layout.font(2),
     marginBottom: Layout.height(2),
-    color: "#000",
+    color: colors.black,
   },
   forgotText: {
     color: colors.primary,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: Layout.height(2),
   },
   loginButtonText: {
-    color: "#fff",
+    color: colors.white,
     fontSize: Layout.font(2.2),
     fontWeight: "bold",
   },

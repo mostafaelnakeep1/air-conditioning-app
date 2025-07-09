@@ -1,42 +1,63 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { Layout } from "../../constants/layout";
 import colors from "../../constants/colors";
 import apiClient from "../../api/apiClient";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 
-
 type Props = NativeStackScreenProps<RootStackParamList, "ForgotPasswordScreen">;
 
-
-export default function ForgotPasswordScreen({ navigation } : Props) {
+export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
+  const [codeVerified, setCodeVerified] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSendCode = async () => {
-    if (!email) return Alert.alert("تنبيه", "من فضلك أدخل البريد الإلكتروني");
+    if (!phone || !email)
+      return Alert.alert("تنبيه", "من فضلك أدخل الإيميل ورقم الهاتف");
+
     try {
-      await apiClient.post("/auth/send-reset-code", { email });
+      await apiClient.post("/auth/send-reset-code", { phone, email });
       setCodeSent(true);
-      Alert.alert("تم", "تم إرسال كود إلى بريدك الإلكتروني");
+      Alert.alert("تم", "تم إرسال كود إلى رقم الهاتف");
     } catch (err: any) {
-      Alert.alert("خطأ", err.response?.data?.message || "حدث خطأ");
+      Alert.alert("خطأ", err.response?.data?.message || "حدث خطأ أثناء إرسال الكود");
     }
   };
 
-  const handleVerifyCodeAndReset = async () => {
-    if (!code || !newPassword || !confirmPassword) {
+  const handleVerifyCode = async () => {
+    if (!code || !phone || !email)
+      return Alert.alert("تنبيه", "من فضلك أدخل الكود والإيميل ورقم الهاتف");
+
+    try {
+      await apiClient.post("/auth/verify-reset-code", { phone, email, code });
+      setCodeVerified(true);
+    } catch (err: any) {
+      Alert.alert("خطأ", err.response?.data?.message || "الكود غير صحيح");
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || !confirmPassword)
       return Alert.alert("تنبيه", "من فضلك املأ كل الحقول");
-    }
-    if (newPassword !== confirmPassword) {
+    if (newPassword !== confirmPassword)
       return Alert.alert("خطأ", "كلمة المرور غير متطابقة");
-    }
+
     try {
       await apiClient.post("/auth/reset-password", {
+        phone,
         email,
         code,
         newPassword,
@@ -44,7 +65,7 @@ export default function ForgotPasswordScreen({ navigation } : Props) {
       Alert.alert("تم", "تم تحديث كلمة المرور بنجاح");
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert("خطأ", err.response?.data?.message || "الكود غير صحيح");
+      Alert.alert("خطأ", err.response?.data?.message || "حدث خطأ أثناء تغيير كلمة المرور");
     }
   };
 
@@ -52,15 +73,29 @@ export default function ForgotPasswordScreen({ navigation } : Props) {
     <View style={styles.container}>
       <Text style={styles.title}>استعادة كلمة المرور</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="البريد الإلكتروني"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+      {!codeSent && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="الإيميل"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="رقم الهاتف"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+          <TouchableOpacity style={styles.button} onPress={handleSendCode}>
+            <Text style={styles.buttonText}>إرسال الكود</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
-      {codeSent && (
+      {codeSent && !codeVerified && (
         <>
           <TextInput
             style={styles.input}
@@ -70,6 +105,14 @@ export default function ForgotPasswordScreen({ navigation } : Props) {
             keyboardType="numeric"
             maxLength={6}
           />
+          <TouchableOpacity style={styles.button} onPress={handleVerifyCode}>
+            <Text style={styles.buttonText}>تأكيد الكود</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {codeVerified && (
+        <>
           <TextInput
             style={styles.input}
             placeholder="كلمة مرور جديدة"
@@ -84,17 +127,11 @@ export default function ForgotPasswordScreen({ navigation } : Props) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
+          <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
+            <Text style={styles.buttonText}>تحديث كلمة المرور</Text>
+          </TouchableOpacity>
         </>
       )}
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={codeSent ? handleVerifyCodeAndReset : handleSendCode}
-      >
-        <Text style={styles.buttonText}>
-          {codeSent ? "تحديث كلمة المرور" : "إرسال الكود"}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -129,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: Layout.width(2),
     width: "100%",
     alignItems: "center",
-    marginTop: Layout.height(2),
+    marginTop: Layout.height(1.5),
   },
   buttonText: {
     color: "#fff",

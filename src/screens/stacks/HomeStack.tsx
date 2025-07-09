@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../../screens/homeScreens/HomeScreen";
 import AllVendorsScreen from "../homeScreens/AllVendorsScreen";
 import { HomeStackParamList } from "../../navigation/types";
+import BrandCategoriesScreen from "../homeScreens/BrandCategoriesScreen";
 // لو عندك صفحات فرعية للرئيسية زي تفاصيل منتج مثلاً، ضيفها هنا
 // import ProductDetailsScreen from "../../screens/homeScreens/ProductDetailsScreen";
 
@@ -16,6 +17,7 @@ export default function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="AllVendorsScreen" component={AllVendorsScreen} />
+      <Stack.Screen name="BrandCategoriesScreen" component={BrandCategoriesScreen} />
       {/* ممكن تضيف شاشات فرعية زي: */}
       {/* <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} /> */}
     </Stack.Navigator>

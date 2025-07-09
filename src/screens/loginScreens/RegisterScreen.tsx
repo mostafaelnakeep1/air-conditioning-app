@@ -12,19 +12,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  I18nManager
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import MapView, { Marker } from "react-native-maps";
-import MultiSelect from "react-native-multiple-select";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
-import { BASE_URL } from "../../config/config";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../api/apiClient";
-
 
 type RootStackParamList = {
   Register: undefined;
@@ -42,49 +41,18 @@ export default function RegisterScreen({
   navigation: RegisterScreenNavigationProp;
 }) {
   const { login } = useAuth();
-  const { userToken } = useAuth();
   const [userType, setUserType] = useState<"client" | "company">("client");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [locationOption, setLocationOption] = useState<"current" | "link" | null>(null);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationLink, setLocationLink] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
-
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [coverageAreas, setCoverageAreas] = useState<string[]>([]);
   const [companyImage, setCompanyImage] = useState<string | null>(null);
-
-  const governorates = [
-    "القاهرة",
-    "الجيزة",
-    "الإسكندرية",
-    "الدقهلية",
-    "الشرقية",
-    "الغربية",
-    "المنوفية",
-    "البحيرة",
-    "الفيوم",
-    "المنيا",
-    "أسيوط",
-    "سوهاج",
-    "قنا",
-    "الأقصر",
-    "أسوان",
-    "بورسعيد",
-    "السويس",
-    "دمياط",
-    "الإسماعيلية",
-    "بني سويف",
-    "مطروح",
-    "الوادي الجديد",
-    "شمال سيناء",
-    "جنوب سيناء",
-    "كفر الشيخ",
-    "البحر الأحمر",
-  ];
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -108,263 +76,275 @@ export default function RegisterScreen({
     });
   };
 
-const handleRegister = async () => {
-  if (!name || !email || !password) {
-    Alert.alert("تنبيه", "من فضلك املأ جميع الحقول الأساسية");
-    return;
-  }
-
-  if (userType === "company") {
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
-      Alert.alert("تنبيه", "رقم الهاتف غير صالح أو مفقود");
+  const handleRegister = async () => {
+    if (!name || !email) {
+      Alert.alert("تنبيه", "من فضلك املأ جميع الحقول الأساسية");
       return;
     }
-    if (!location) {
-      Alert.alert("تنبيه", "يرجى تحديد الموقع الجغرافي من الخريطة");
-      return;
+
+    if (userType === "company") {
+      if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+        Alert.alert("تنبيه", "رقم الهاتف غير صالح أو مفقود");
+        return;
+      }
+
+      if (!locationOption) {
+        Alert.alert("تنبيه", "يرجى اختيار طريقة تحديد الموقع الجغرافي");
+        return;
+      }
+
+      if (locationOption === "current" && !location) {
+        Alert.alert("تنبيه", "يرجى تحديد الموقع من الخريطة");
+        return;
+      }
+
+      if (locationOption === "link" && !locationLink.trim()) {
+        Alert.alert("تنبيه", "يرجى إدخال رابط موقع صالح");
+        return;
+      }
+
+      if (!companyImage) {
+        Alert.alert("تنبيه", "يرجى اختيار صورة للشركة");
+        return;
+      }
     }
-    if (!address) {
-      Alert.alert("تنبيه", "يرجى إدخال عنوان الشركة");
-      return;
+
+    const formData = new FormData();
+
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("role", userType);
+
+    if (userType === "client") {
+      formData.append("password", password);
     }
-    if (coverageAreas.length === 0) {
-      Alert.alert("تنبيه", "يرجى اختيار المحافظات المغطاة");
-      return;
+
+    if (userType === "company") {
+      formData.append("phone", phone);
+
+      if (locationOption === "current") {
+        formData.append("location", JSON.stringify({
+          latitude: location!.latitude,
+          longitude: location!.longitude,
+        }));
+      } else if (locationOption === "link") {
+        formData.append("location", JSON.stringify({ link: locationLink }));
+      }
+
+      const fileName = companyImage!.split("/").pop()!;
+      const ext = fileName.split(".").pop();
+      formData.append("image", {
+        uri: companyImage!,
+        name: `company_logo.${ext}`,
+        type: `image/${ext}`,
+      } as any);
     }
-    if (!companyImage) {
-      Alert.alert("تنبيه", "يرجى اختيار صورة للشركة");
-      return;
-    }
-  }
 
-  const formData = new FormData();
+    try {
+      setLoading(true);
+      const endpoint = userType === "company" ? "/auth/company/register" : "/auth/register";
 
-  formData.append("name", name);
-  formData.append("email", email);
-  formData.append("password", password);
-  formData.append("role", userType);
-
-  if (userType === "company") {
-    formData.append("phone", phone);
-    formData.append("address", address);
-    formData.append("coverageAreas", JSON.stringify(coverageAreas));
-    formData.append("location", JSON.stringify(location));
-
-    const fileName = companyImage!.split("/").pop()!;
-    const ext = fileName.split(".").pop();
-    formData.append("image", {
-      uri: companyImage!,
-      name: `company_logo.${ext}`,
-      type: `image/${ext}`,
-    } as any);
-  }
-
-  try {
-    setLoading(true);
-
-
-    // التسجيل لا يحتاج توكن
-    const endpoint = userType === "company" ? "/auth/company/register" : "/auth/register";
-
-    const res = await apiClient.post(endpoint, formData, {
+      const res = await apiClient.post(endpoint, formData, {
         headers: {
           Accept: "application/json",
           "Content-Type": "multipart/form-data",
         },
-      
-    });
+      });
 
-    const data = res.data;
-    console.log("📥 Server response:", res.status, data);
+      const data = res.data;
+      console.log("📥 Server response:", res.status, data);
 
-    if (userType === "company") {
-      Alert.alert(
-        "تم إرسال الطلب",
-        "تم تسجيل الشركة بنجاح، بانتظار موافقة الإدارة، يتم التفعيل عادة خلال 48 ساعة ."
-      );
-       } else {
-      Alert.alert("تم التسجيل", "تم إنشاء الحساب بنجاح");
+      if (userType === "company") {
+        Alert.alert("تم إرسال الطلب", "تم تسجيل الشركة بنجاح، بانتظار موافقة الإدارة.");
+      } else {
+        Alert.alert("تم التسجيل", "تم إنشاء الحساب بنجاح");
+      }
+
+      navigation.navigate("LoginScreen" as never);
+    } catch (err: any) {
+      console.log("❌ Error:", err.response?.data || err.message);
+      Alert.alert("خطأ", err.response?.data?.message || "تعذر الاتصال بالسيرفر");
+    } finally {
+      setLoading(false);
     }
-    navigation.navigate("LoginScreen" as never);
-
-  } catch (err: any) {
-    console.log("❌ Error:", err.response?.data || err.message);
-    Alert.alert("خطأ", err.response?.data?.message || "تعذر الاتصال بالسيرفر");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
-        {/* ScrollView بيغلف المحتوى بس مش FlatList */}
-        <ScrollView
-          contentContainerStyle={{ padding: Layout.width(5) }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          style={{ direction: "rtl" }}
-        >
-          <Text style={styles.header}>إنشاء حساب جديد</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={{ padding: Layout.width(5), flexGrow: 1,  flexDirection: I18nManager.isRTL ? "column-reverse" : "column", }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.header}>إنشاء حساب جديد</Text>
 
-          <View style={styles.switchContainer}>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                userType === "client" && styles.activeButton,
-              ]}
-              onPress={() => setUserType("client")}
-            >
-              <Text
+            <View style={styles.switchContainer}>
+              <TouchableOpacity
                 style={[
-                  styles.switchText,
-                  userType === "client" && styles.activeText,
+                  styles.switchButton,
+                  userType === "client" && styles.activeButton,
                 ]}
+                onPress={() => setUserType("client")}
               >
-                عميل
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                userType === "company" && styles.activeButton,
-              ]}
-              onPress={() => setUserType("company")}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  userType === "company" && styles.activeText,
-                ]}
-              >
-                شركة
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.label}>الاسم</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="الاسم الكامل"
-            value={name}
-            onChangeText={setName}
-            textAlign="right"
-          />
-
-          <Text style={styles.label}>البريد الإلكتروني</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="email-address"
-            placeholder="email@example.com"
-            value={email}
-            onChangeText={setEmail}
-            textAlign="right"
-            autoCapitalize="none"
-          />
-
-          <Text style={styles.label}>كلمة المرور</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="******"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            textAlign="right"
-          />
-
-          {userType === "company" && (
-            <>
-              <Text style={styles.label}>رقم الهاتف</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="01012345678"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                textAlign="right"
-              />
-
-              <Text style={styles.label}>صورة الشركة</Text>
-              <TouchableOpacity style={styles.input} onPress={pickImage}>
-                <Text>{companyImage ? "✅ تم اختيار صورة" : "اختر صورة من المعرض"}</Text>
+                <Text
+                  style={[
+                    styles.switchText,
+                    userType === "client" && styles.activeText,
+                  ]}
+                >
+                  عميل
+                </Text>
               </TouchableOpacity>
-              
-              {companyImage && (
-                <Image
-                  source={{ uri: companyImage }}
-                  style={{ height: 100, marginBottom: 10, borderRadius: 10 }}
+              <TouchableOpacity
+                style={[
+                  styles.switchButton,
+                  userType === "company" && styles.activeButton,
+                ]}
+                onPress={() => setUserType("company")}
+              >
+                <Text
+                  style={[
+                    styles.switchText,
+                    userType === "company" && styles.activeText,
+                  ]}
+                >
+                  شركة
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>الاسم</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="الاسم الكامل"
+              value={name}
+              onChangeText={setName}
+              textAlign="right"
+            />
+
+            <Text style={styles.label}>البريد الإلكتروني</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="email-address"
+              placeholder="email@example.com"
+              value={email}
+              onChangeText={setEmail}
+              textAlign="right"
+              autoCapitalize="none"
+            />
+
+            {userType === "client" && (
+              <>
+                <Text style={styles.label}>كلمة المرور</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="******"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                  textAlign="right"
                 />
-              )}
-              <Text style={styles.label}>عنوان الشركة</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="مثال: شارع التحرير، الدقي، الجيزة"
-                value={address}
-                onChangeText={setAddress}
-                textAlign="right"
-              />
-              <Text style={styles.label}>الموقع الجغرافي</Text>
-              <TouchableOpacity style={styles.input} onPress={getCurrentLocation}>
-                <Text>{location ? "✅ تم تحديد الموقع" : "استخدام موقعي الحالي"}</Text>
-              </TouchableOpacity>
-              {location && (
-                <MapView
-                  style={{ height: 150, marginVertical: 10 }}
-                  region={{
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
+              </>
+            )}
+
+            {userType === "company" && (
+              <>
+                <Text style={styles.label}>رقم الهاتف</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="01012345678"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                  textAlign="right"
+                />
+
+                <Text style={styles.label}>صورة الشركة</Text>
+                <TouchableOpacity style={styles.input} onPress={pickImage}>
+                  <Text>
+                    {companyImage ? "✅ تم اختيار صورة" : "اختر صورة من المعرض"}
+                  </Text>
+                </TouchableOpacity>
+
+                {companyImage && (
+                  <Image
+                    source={{ uri: companyImage }}
+                    style={{ height: 100, marginBottom: 10, borderRadius: 10 }}
+                  />
+                )}
+
+                <Text style={styles.label}>الموقع الجغرافي</Text>
+
+                <TouchableOpacity
+                  style={[
+                    styles.input,
+                    locationOption === "current" && { borderColor: colors.primary, borderWidth: 2 },
+                  ]}
+                  onPress={async () => {
+                    setLocationOption("current");
+                    setLocationLink("");
+                    await getCurrentLocation();
                   }}
                 >
-                  <Marker coordinate={location} />
-                </MapView>
-              )}
+                  <Text style={{ textAlign: "right" }}>
+                    {location ? "✅ تم تحديد الموقع الحالي" : "📍 استخدام موقعي الحالي"}
+                  </Text>
+                </TouchableOpacity>
 
-              <Text style={styles.label}>المحافظات التي تغطيها</Text>
-
-              {/* أهم تعديل هنا: حددت ارتفاع ثابت للمكون MultiSelect عشان مايحصلش تعارض */}
-              <View style={{ height: 220 }}>
-                <MultiSelect
-                  items={governorates.map((g) => ({ id: g, name: g }))}
-                  uniqueKey="id"
-                  onSelectedItemsChange={setCoverageAreas}
-                  selectedItems={coverageAreas}
-                  selectText="اختر المحافظات"
-                  searchInputPlaceholderText="بحث..."
-                  tagRemoveIconColor={colors.primary}
-                  tagBorderColor={colors.primary}
-                  tagTextColor={colors.primary}
-                  selectedItemTextColor={colors.white}
-                  selectedItemIconColor={colors.white}
-                  itemTextColor={colors.black}
-                  displayKey="name"
-                  submitButtonText="تم"
-                  styleDropdownMenu={{ backgroundColor: colors.white, marginBottom: 20 }}
-                  searchInputStyle={{ textAlign: "right", color: colors.black }}
-                  hideSubmitButton={false}
+                <Text style={[styles.label, { marginTop: 10 }]}>أو أدخل رابط الموقع</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    locationOption === "link" && { borderColor: colors.primary, borderWidth: 2 },
+                  ]}
+                  placeholder="https://maps.app.goo.gl/..."
+                  value={locationLink}
+                  onChangeText={(text) => {
+                    setLocationLink(text);
+                    setLocationOption("link");
+                    setLocation(null);
+                  }}
+                  textAlign="right"
                 />
-              </View>
-            </>
-          )}
 
-          <View style={styles.rememberMeContainer}>
-            <Switch value={rememberMe} onValueChange={setRememberMe} />
-            <Text style={styles.rememberMeText}>تذكرني</Text>
-          </View>
+                {location && (
+                  <MapView
+                    style={{ height: 150, marginVertical: 10 }}
+                    region={{
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                  >
+                    <Marker coordinate={location} />
+                  </MapView>
+                )}
+              </>
+            )}
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleRegister} disabled={loading}>
-            <Text style={styles.submitText}>{loading ? "جاري التسجيل..." : "تسجيل"}</Text>
-          </TouchableOpacity>
-        </ScrollView>
+            <View style={styles.rememberMeContainer}>
+              <Switch value={rememberMe} onValueChange={setRememberMe} />
+              <Text style={styles.rememberMeText}>تذكرني</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              <Text style={styles.submitText}>
+                {loading ? "جاري التسجيل..." : "تسجيل"}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

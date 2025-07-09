@@ -15,10 +15,13 @@ import apiClient from "../../api/apiClient";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Product } from "../../navigation/types";
+import { useAuth } from "../../context/AuthContext";
+
 
 export default function ManageProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { userToken } = useAuth();
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -28,7 +31,9 @@ export default function ManageProductsScreen() {
 
   const fetchProducts = async () => {
     try {
-      const res = await apiClient.get("/products/all");
+      const res = await apiClient.get("/products/all", {
+  headers: { Authorization: `Bearer ${userToken}` },
+});
       setProducts(res.data.products || []);
     } catch (error) {
       console.error("Fetch products error:", error);

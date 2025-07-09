@@ -48,7 +48,7 @@ export default function AdBanner() {
         keyExtractor={(item) => item._id}
         horizontal
         pagingEnabled
-        inverted
+        inverted={true}
         initialScrollIndex={ads.length - 1}
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (

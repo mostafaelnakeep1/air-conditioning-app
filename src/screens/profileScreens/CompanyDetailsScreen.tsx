@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   detail: {
     fontSize: Layout.font(2.3),
-    color: "#444",
+    color: colors.black,
     textAlign: "right",
     marginBottom: Layout.height(1),
   },

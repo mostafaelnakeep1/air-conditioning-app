@@ -11,10 +11,14 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Image,
+  Linking,
 } from "react-native";
+import { Video, ResizeMode } from "expo-av";
+
 import apiClient from "../../api/apiClient";
 import { useAuth } from "../../context/AuthContext";
 import colors from "../../constants/colors";
+import { BASE_URL } from "../../config/config";// ✅ عدل ده حسب عنوان السيرفر بتاعك
 
 type Company = {
   _id: string;
@@ -24,7 +28,6 @@ type Company = {
   address?: string;
   description?: string;
   createdAt?: string;
-  [key: string]: any;
 };
 
 type Offer = {
@@ -55,7 +58,6 @@ export default function PendingItemsScreen() {
       });
       setCompanies(res.data.companies);
     } catch (error) {
-      console.error("❌ فشل جلب الشركات:", error);
       Alert.alert("خطأ", "فشل جلب الشركات المعلقة");
     }
   };
@@ -67,8 +69,7 @@ export default function PendingItemsScreen() {
       });
       setOffers(res.data.offers);
     } catch (error) {
-      console.error("❌ فشل في جلب العروض:", error);
-      Alert.alert("خطأ", "فشل في جلب العروض");
+      Alert.alert("خطأ", "فشل جلب العروض");
     }
   };
 
@@ -80,19 +81,41 @@ export default function PendingItemsScreen() {
     );
   }, [userToken]);
 
-  const handleCompanyAction = async (id: string, action: "approve" | "reject") => {
-    try {
-      await apiClient.put(`/admin/companies/${id}/${action}`, {}, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      Alert.alert("نجاح", `تم ${action === "approve" ? "قبول" : "رفض"} الشركة`);
-      setCompanyModalVisible(false);
-      setSelectedCompany(null);
-      fetchPendingCompanies();
-    } catch (error) {
-      Alert.alert("خطأ", `فشل ${action === "approve" ? "قبول" : "رفض"} الشركة`);
+
+const handleCompanyAction = async (id: string, action: "approve" | "reject") => {
+  try {
+    await apiClient.put(`/admin/companies/${id}/${action}`, {}, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+
+    Alert.alert("تم", `تم ${action === "approve" ? "قبول" : "رفض"} الشركة`);
+    setCompanyModalVisible(false);
+    fetchPendingCompanies();
+
+    // لو الشركة تم قبولها، ابعت واتساب
+    if (action === "approve" && selectedCompany?.phone) {
+      const phone = selectedCompany.phone.replace(/\D/g, ""); // شيل الرموز
+      const message = `أهلاً ${selectedCompany.name} 👋
+
+    تم تفعيل حساب شركتكم على تطبيق "تكييفات".
+    بيانات الدخول:
+    📧 الإيميل: ${selectedCompany.email}
+    🔐 كلمة المرور: password123
+
+    ننصحكم بتغيير كلمة المرور بعد أول تسجيل دخول.
+
+    رابط الدخول متاح الآن ✅
+    تحياتنا 🌟`;
+
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      Linking.openURL(url);
     }
-  };
+
+  } catch {
+    Alert.alert("خطأ", "فشل العملية");
+  }
+};
+
 
   const handleOfferAction = async (id: string, action: "approve" | "reject") => {
     try {
@@ -101,10 +124,9 @@ export default function PendingItemsScreen() {
       });
       Alert.alert("تم", `تم ${action === "approve" ? "قبول" : "رفض"} العرض`);
       setOfferModalVisible(false);
-      setSelectedOffer(null);
       fetchPendingOffers();
-    } catch (error) {
-      Alert.alert("خطأ", `فشل ${action === "approve" ? "قبول" : "رفض"} العرض`);
+    } catch {
+      Alert.alert("خطأ", "فشل العملية");
     }
   };
 
@@ -118,6 +140,7 @@ export default function PendingItemsScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* الشركات */}
       <Text style={styles.sectionTitle}>الشركات المعلقة</Text>
       {companies.length === 0 ? (
         <Text style={styles.noDataText}>لا توجد شركات معلقة</Text>
@@ -141,6 +164,7 @@ export default function PendingItemsScreen() {
         />
       )}
 
+      {/* العروض */}
       <Text style={styles.sectionTitle}>العروض المعلقة</Text>
       {offers.length === 0 ? (
         <Text style={styles.noDataText}>لا توجد عروض معلقة</Text>
@@ -224,16 +248,31 @@ export default function PendingItemsScreen() {
                       <Text style={styles.text}>
                         النوع: {selectedOffer.type === "image" ? "صورة" : "فيديو"}
                       </Text>
-                      {selectedOffer.mediaUrl && selectedOffer.type === "image" && (
+
+                      {/* صورة */}
+                      {selectedOffer?.type === "image" &&  (
                         <Image
-                          source={{ uri: selectedOffer.mediaUrl }}
+                          source={{ uri: selectedOffer.mediaUrl
+                          ? `${BASE_URL}${selectedOffer.mediaUrl}`
+                          : "https://via.placeholder.com/300x200",  }}
                           style={{ width: "100%", height: 200, marginVertical: 10 }}
                           resizeMode="cover"
                         />
                       )}
-                      {selectedOffer.mediaUrl && selectedOffer.type === "video" && (
-                        <Text style={styles.text}>📹 رابط الفيديو: {selectedOffer.mediaUrl}</Text>
+
+                      {/* فيديو */}
+                      {selectedOffer?.type === "video" && (
+                        <Video
+                          source={{ uri: selectedOffer.mediaUrl
+                          ? `${BASE_URL}${selectedOffer.mediaUrl}`
+                          : "https://via.placeholder.com/300x200", }}
+                          style={{ width: "100%", height: 200, marginVertical: 10 }}
+                          useNativeControls={true}
+
+                          resizeMode={ResizeMode.COVER}
+                        />
                       )}
+
                       <View style={styles.buttonsRow}>
                         <TouchableOpacity
                           style={[styles.button, styles.approveButton]}
@@ -264,16 +303,22 @@ export default function PendingItemsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 10, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   sectionTitle: { fontSize: 20, fontWeight: "bold", marginVertical: 10, textAlign: "right" },
   noDataText: { textAlign: "center", color: colors.gray, marginVertical: 20 },
   card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
+    backgroundColor: "#fff",
+    borderRadius: 10,
     padding: 16,
     marginVertical: 6,
-    elevation: 1,
+    elevation: 2,
+    borderLeftWidth: 5,
+    borderLeftColor: colors.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     alignItems: "flex-end",
   },
   title: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
@@ -288,13 +333,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 20,
-    maxHeight: "80%",
+    maxHeight: "85%",
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 10,
+    color: colors.primary,
   },
   buttonsRow: {
     flexDirection: "row",
@@ -309,6 +355,7 @@ const styles = StyleSheet.create({
   },
   approveButton: { backgroundColor: "#34d399" },
   rejectButton: { backgroundColor: "#f87171" },
+  viewButton: { backgroundColor: colors.primary },
   buttonText: { color: "#fff", fontWeight: "bold" },
   closeText: {
     color: colors.primary,

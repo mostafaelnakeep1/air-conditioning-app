@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../../src/config/config"; // غيّر حسب مكان الملف
-import * as Notifications from "expo-notifications";
+//import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 
@@ -32,26 +32,26 @@ export const sendNotification = async () => {
 };
 
 
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (!Device.isDevice) {
-    console.log("Must use physical device for Push Notifications");
-    return null;
-  }
+// export async function registerForPushNotificationsAsync(): Promise<string | null> {
+//   if (!Device.isDevice) {
+//     console.log("Must use physical device for Push Notifications");
+//     return null;
+//   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+//   const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//   let finalStatus = existingStatus;
 
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
+//   if (existingStatus !== "granted") {
+//     const { status } = await Notifications.requestPermissionsAsync();
+//     finalStatus = status;
+//   }
 
-  if (finalStatus !== "granted") {
-    console.log("Failed to get push token for push notification!");
-    return null;
-  }
+//   if (finalStatus !== "granted") {
+//     console.log("Failed to get push token for push notification!");
+//     return null;
+//   }
 
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log("📱 Expo Push Token:", token);
-  return token;
-}
+//   const token = (await Notifications.getExpoPushTokenAsync()).data;
+//   console.log("📱 Expo Push Token:", token);
+//   return token;
+// }

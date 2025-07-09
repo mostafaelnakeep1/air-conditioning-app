@@ -104,6 +104,7 @@ export type ProfileStackParamList = {
 export type HomeStackParamList = {
   HomeMain: undefined;
   AllVendorsScreen: undefined; // ✅ أضف ده هنا
+  BrandCategoriesScreen: undefined;
   // باقي الشاشات...
 };
 

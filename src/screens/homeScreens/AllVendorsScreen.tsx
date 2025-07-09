@@ -12,10 +12,14 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Linking,
+  I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import colors from "../../constants/colors";
 import { Layout } from "../../constants/layout";
+import axios from "axios";
+import { BASE_URL } from "../../config/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const vendors = new Array(20).fill(null).map((_, i) => ({
   id: (i + 1).toString(),
@@ -32,9 +36,27 @@ const vendors = new Array(20).fill(null).map((_, i) => ({
 export default function AllVendorsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
-
+  const [vendors, setVendors] = useState<any[]>([]);
   const modalScale = useRef(new Animated.Value(0)).current;
 
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const { data } = await axios.get(`${BASE_URL}/company/active-ordered`,{
+       headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+      setVendors(data);
+    } catch (err) {
+      console.error("فشل تحميل الشركات", err);
+    }
+  };
   const showModal = (vendor: any) => {
     setSelectedVendor(vendor);
     Animated.spring(modalScale, {
@@ -72,7 +94,7 @@ export default function AllVendorsScreen() {
 
   const renderVendorCard = (vendor: any) => (
     <TouchableOpacity
-      key={vendor.id}
+      
       style={styles.card}
       activeOpacity={0.9}
       onPress={() => showModal(vendor)}
@@ -85,7 +107,6 @@ export default function AllVendorsScreen() {
         <View style={styles.overlay} />
         <View style={styles.content}>
           <Text style={styles.name}>{vendor.name}</Text>
-          <Text style={styles.location}>{vendor.location}</Text>
           <View style={styles.ratingRow}>
             {[...Array(5)].map((_, i) => (
               <Text

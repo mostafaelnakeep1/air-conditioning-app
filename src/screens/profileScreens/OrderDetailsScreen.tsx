@@ -59,11 +59,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(3),
     padding: Layout.height(3),
     elevation: 4,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 5,

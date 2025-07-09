@@ -9,8 +9,16 @@ import {
 } from "react-native";
 import { Layout } from "../../constants/layout";
 import colors from "../../constants/colors";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-// صور محلية للبراندات
+// 👇 عرّف الـ types الخاصة بالـ stack navigation
+type RootStackParamList = {
+  BrandCategoriesScreen: { brandName: string };
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "BrandCategoriesScreen">;
+
 const vendors = [
   {
     id: 1,
@@ -39,25 +47,32 @@ const vendors = [
   },
   {
     id: 6,
-    name: "كارير",
+    name: "جري",
     image: require("../../imags/gree.png"),
   },
 ];
 
 export default function BrandsSection() {
+  const navigation = useNavigation<NavigationProp>();
+
   return (
     <View style={styles.container}>
       <FlatList
         data={vendors}
         keyExtractor={(item) => item.id.toString()}
         horizontal
+        inverted={true}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { flexDirection: "row-reverse" }]}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.item}>
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => navigation.navigate("BrandCategoriesScreen", { brandName: item.name })}
+          >
             <View style={styles.circle}>
               <Image source={item.image} style={styles.logo} />
-            </View>            
+            </View>
+            
           </TouchableOpacity>
         )}
       />
@@ -71,7 +86,6 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Layout.width(3),
     marginVertical: Layout.height(2),
-  
   },
   list: {
     gap: Layout.width(2),
@@ -101,6 +115,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: Layout.font(1.8),
     color: colors.black,
-    writingDirection: "rtl",
+    textAlign: "center",
   },
 });

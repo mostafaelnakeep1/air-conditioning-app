@@ -1,4 +1,3 @@
-// src/screens/bottomTabScreens/CategoriesScreen.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -23,8 +22,8 @@ import { Product } from "../../navigation/types";
 import { useFavorites } from "../../context/FavoritesContext";
 import { useAuth } from "../../context/AuthContext";
 
-
 const screenWidth = Dimensions.get("window").width;
+const IMAGE_BASE_URL = "http://192.168.82.48:5001/uploads/";
 
 const CategoriesScreen = () => {
   const [search, setSearch] = useState("");
@@ -52,15 +51,16 @@ const CategoriesScreen = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get("/products/all", {
+      console.log("Token:", token);
+      const { data } = await apiClient.get("/products/public", {
         headers: {
-    Authorization: `Bearer ${token}`, // تأكد إن عندك التوكن هنا
-  },
-        params: { search, brand, power, minPrice, maxPrice, sortBy },
+          Authorization: `Bearer ${token}`,
+        },
+        params: { search, brand, capacity: power, minPrice, maxPrice, sortBy },
       });
       setProducts(data.products);
     } catch (err) {
-      console.log("Error fetching products", err);
+      console.log("Error fetching products", JSON.stringify(err));
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ const CategoriesScreen = () => {
 
     return (
       <ImageBackground
-        source={{ uri: item.image }}
+        source={{ uri: IMAGE_BASE_URL + item.image }}
         resizeMode="cover"
         imageStyle={{ opacity: 0.15, borderRadius: 16 }}
         style={[styles.card, isGrid && styles.gridCard]}
@@ -103,12 +103,11 @@ const CategoriesScreen = () => {
         <View style={styles.cardContent}>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.details}>القدرة: {item.power}</Text>
+            <Text style={styles.details}>القدرة: {item.capacity}</Text>
             <Text style={styles.details}>السعر: {item.price} ج</Text>
             <Text style={styles.details}>الشركة: {item.company?.name || "غير محددة"}</Text>
-            <Text style={styles.details}>
-              مبيعات: {item.sold} | تقييم: ⭐ {item.rating}
-            </Text>
+            {/* لو عندك مبيعات وتقييم تقدر تضيف هنا */}
+            {/* <Text style={styles.details}>مبيعات: {item.sold} | تقييم: ⭐ {item.rating}</Text> */}
           </View>
           <View style={styles.actions}>
             <TouchableOpacity style={styles.iconBtn}>
@@ -248,7 +247,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: Layout.defaultPadding,
-    paddingTop: Layout.height(7)
+    paddingTop: Layout.height(7),
   },
   search: {
     backgroundColor: "#f5f5f5",
@@ -262,7 +261,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10,
     marginBottom: 10,
-    justifyContent: "space-between"
+    justifyContent: "space-between",
   },
   filterBtn: {
     backgroundColor: colors.white,

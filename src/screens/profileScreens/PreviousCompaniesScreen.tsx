@@ -19,6 +19,7 @@ import type { StackNavigationProp } from "@react-navigation/stack";
 import type { RootStackParamList, Company } from "../../navigation/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiClient from "../../api/apiClient";
+import { ColorProperties } from "react-native-reanimated/lib/typescript/Colors";
 
 
 type PreviousCompaniesScreenNavigationProp = StackNavigationProp<
@@ -191,7 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   searchInput: {
-    backgroundColor: "#f1f1f1",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(3),
     paddingVertical: Layout.height(1.5),
     paddingHorizontal: Layout.width(4),
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   cityChip: {
     paddingHorizontal: Layout.width(4),
     paddingVertical: Layout.height(1),
-    backgroundColor: "#eee",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(5),
     marginRight: Layout.width(2),
   },
@@ -218,12 +219,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.width(5),
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     borderRadius: Layout.width(4),
     padding: Layout.width(4),
     width: "100%",
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -241,13 +242,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: Layout.height(2),
     fontSize: Layout.font(2.2),
-    color: "#999",
+    color: colors.black,
     fontWeight: "600",
   },
   card: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "#f3f3f3",
+    backgroundColor: colors.white,
     paddingVertical: Layout.height(1),
     paddingHorizontal: Layout.width(3),
     borderRadius: Layout.width(3),
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   details: {
     fontSize: Layout.font(1.8),
-    color: "#555",
+    color: colors.background,
     textAlign: "right",
   },
 });
